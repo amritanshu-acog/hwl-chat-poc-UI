@@ -9,6 +9,7 @@ export default function App() {
       </div>
 
       <HWLAssistant
+        apiUrl="http://localhost:3000/api"
         title="HWL Helpbot"
         theme={{ primaryColor: '#0066cc' }}
         placeholder="Ask me anything..."

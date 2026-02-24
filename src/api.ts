@@ -1,8 +1,5 @@
 import type { Message } from "./types";
 
-// TODO: Replace with actual backend URL from HWLAssistantProps.apiUrl
-const BASE_URL = "http://localhost:3000/api";
-
 /**
  * Send a message to the AI backend and get a response.
  * TODO: Implement streaming support in Phase 2 using ReadableStream.
@@ -10,8 +7,8 @@ const BASE_URL = "http://localhost:3000/api";
 export async function sendMessage(
   message: string,
   sessionId: string,
-  apiUrl: string = BASE_URL,
-  file?: File,
+  apiUrl: string,
+  _file?: File,
 ): Promise<string> {
   const res = await fetch(`${apiUrl}/chat`, {
     method: "POST",
@@ -33,7 +30,7 @@ export async function sendMessage(
  */
 export async function uploadDocument(
   file: File,
-  apiUrl: string = BASE_URL,
+  apiUrl: string,
 ): Promise<void> {
   const body = new FormData();
   body.append("file", file);
@@ -49,7 +46,7 @@ export async function uploadDocument(
  * Phase 2: Swap this to fetch from backend — one-line change in useMessages.ts.
  */
 export async function getChatHistory(sessionId: string): Promise<Message[]> {
-  // TODO Phase 2: Replace with fetch(`${BASE_URL}/sessions/${sessionId}/messages`)
+  // TODO Phase 2: Replace with fetch(`YOUR_API_URL/sessions/${sessionId}/messages`)
   const raw = localStorage.getItem(`hwl_session_${sessionId}`);
   if (!raw) return [];
   const parsed = JSON.parse(raw) as Array<
@@ -67,7 +64,7 @@ export async function saveMessage(
   sessionId: string,
   message: Message,
 ): Promise<void> {
-  // TODO Phase 2: Replace with fetch(`${BASE_URL}/sessions/${sessionId}/messages`, { method:'POST', body:JSON.stringify(message) })
+  // TODO Phase 2: Replace with fetch(`YOUR_API_URL/sessions/${sessionId}/messages`, { method:'POST', body:JSON.stringify(message) })
   const existing = await getChatHistory(sessionId);
   const updated = [...existing, message];
   localStorage.setItem(`hwl_session_${sessionId}`, JSON.stringify(updated));
@@ -79,7 +76,7 @@ export async function saveMessage(
  */
 export async function createHubSpotTicket(
   _sessionId: string,
-  _apiUrl: string = BASE_URL,
+  _apiUrl: string,
 ): Promise<void> {
   // TODO Phase 2: POST to ${apiUrl}/hubspot/ticket
   throw new Error("HubSpot integration not yet implemented");
@@ -91,7 +88,7 @@ export async function createHubSpotTicket(
  */
 export async function requestLiveAgent(
   _sessionId: string,
-  _apiUrl: string = BASE_URL,
+  _apiUrl: string,
 ): Promise<void> {
   // TODO Phase 2: POST to ${apiUrl}/handoff
   throw new Error("Live agent handoff not yet implemented");

@@ -14,7 +14,7 @@ export interface Session {
 }
 
 export interface HWLAssistantProps {
-  apiUrl?: string;
+  apiUrl: string;
   title?: string;
   theme?: { primaryColor?: string };
   placeholder?: string;

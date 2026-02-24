@@ -27,6 +27,7 @@ export function MessageBubble({ message, primaryColor, onQuickReply, onCreateTic
     ol: ({ children }) => <ol className="ml-4 mb-2 space-y-1 list-decimal">{children}</ol>,
     li: ({ children }) => <li className="text-sm text-gray-800 leading-relaxed">{children}</li>,
     strong: ({ children }) => <strong className="font-semibold text-gray-900">{children}</strong>,
+    // @ts-expect-error inline is passed by older react-markdown or custom plugins but not in types
     code: ({ inline, children }) =>
       inline ? (
         <code className="px-1 py-0.5 bg-gray-200 rounded text-xs font-mono">{children}</code>
