@@ -2,9 +2,11 @@ import type { Message, Session } from '../types'
 import { MessageList } from './MessageList'
 import { InputBar } from './InputBar'
 import { ChatHistory } from './ChatHistory'
+import { useState } from 'react'
 
 interface Props {
   title: string
+  subtitle?: string
   messages: Message[]
   isLoading: boolean
   inputValue: string
@@ -14,6 +16,7 @@ interface Props {
   sessionId: string
   primaryColor: string
   placeholder: string
+  quickReplies?: Array<{ icon: string; text: string }>
   onClose: () => void
   onSend: () => void
   onInputChange: (v: string) => void
@@ -26,14 +29,24 @@ interface Props {
   onQuickReply: (text: string) => void
 }
 
+type Tab = 'chat' | 'faqs' | 'guides'
+
 export function ChatWindow({
-  title, messages, isLoading, inputValue, attachment,
+  title, subtitle = 'Your intelligent guide', messages, isLoading, inputValue, attachment,
   showHistory, sessions, sessionId, primaryColor, placeholder,
-  onClose, onSend, onInputChange, onFileSelect, onFileClear,
+  quickReplies, onClose, onSend, onInputChange, onFileSelect, onFileClear,
   onToggleHistory, onSelectSession, onDeleteSession, onNewChat, onQuickReply
 }: Props) {
+  const [activeTab, setActiveTab] = useState<Tab>('chat')
+
+  const tabs: { key: Tab; label: string }[] = [
+    // { key: 'chat', label: 'Chat' },
+    // { key: 'faqs', label: 'FAQs' },
+    // { key: 'guides', label: 'Guides' },
+  ]
+
   return (
-    <div className="flex flex-col w-[800px] h-[580px] bg-white rounded-2xl shadow-2xl border border-gray-100 overflow-hidden">
+    <div className="flex flex-col w-[320px] h-[560px] bg-gray-50 rounded-2xl shadow-2xl border border-gray-200 overflow-hidden font-sans">
       {/* Header */}
       <div
         className="flex items-center justify-between px-4 py-3 flex-shrink-0"
@@ -45,9 +58,12 @@ export function ChatWindow({
               <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 14H9V8h2v8zm4 0h-2V8h2v8z" />
             </svg>
           </div>
-          <span className="text-white font-semibold text-sm">{title}</span>
+          <div>
+            <div className="text-white font-semibold text-sm leading-tight">{title}</div>
+            <div className="text-white/70 text-xs leading-tight">{subtitle}</div>
+          </div>
         </div>
-        <div className="flex items-center gap-1">
+        <div className="flex items-center gap-1.5">
           <button
             onClick={onToggleHistory}
             className={`p-1.5 rounded-lg transition-colors ${showHistory ? 'bg-white/30' : 'hover:bg-white/20'}`}
@@ -66,7 +82,29 @@ export function ChatWindow({
         </div>
       </div>
 
-      {/* Body: chat or history */}
+      {/* Tabs */}
+      {!showHistory && (
+        <div className="flex bg-white border-b border-gray-100 flex-shrink-0">
+          {tabs.map(tab => (
+            <button
+              key={tab.key}
+              onClick={() => setActiveTab(tab.key)}
+              className={`flex-1 text-xs font-medium py-2.5 transition-colors relative ${activeTab === tab.key ? 'text-gray-800' : 'text-gray-400 hover:text-gray-600'
+                }`}
+            >
+              {tab.label}
+              {activeTab === tab.key && (
+                <div
+                  className="absolute bottom-0 left-0 right-0 h-0.5 rounded-full"
+                  style={{ backgroundColor: primaryColor }}
+                />
+              )}
+            </button>
+          ))}
+        </div>
+      )}
+
+      {/* Body */}
       <div className="flex-1 flex flex-col min-h-0 relative">
         {showHistory ? (
           <ChatHistory
@@ -78,13 +116,14 @@ export function ChatWindow({
             onBack={onToggleHistory}
             primaryColor={primaryColor}
           />
-        ) : (
+        ) : activeTab === 'chat' ? (
           <>
             <MessageList
               messages={messages}
               isLoading={isLoading}
               primaryColor={primaryColor}
               onQuickReply={onQuickReply}
+              quickReplies={quickReplies}
             />
             <InputBar
               value={inputValue}
@@ -98,6 +137,10 @@ export function ChatWindow({
               primaryColor={primaryColor}
             />
           </>
+        ) : (
+          <div className="flex-1 flex items-center justify-center text-gray-400 text-sm">
+            {activeTab === 'faqs' ? 'FAQs coming soon' : 'Guides coming soon'}
+          </div>
         )}
       </div>
     </div>

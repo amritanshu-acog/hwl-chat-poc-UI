@@ -1,7 +1,7 @@
 export interface Message {
   id: string;
   role: "user" | "assistant";
-  content: string; // Can be plain text, markdown, or JSON string for MDX components
+  content: string; // Can be plain text, markdown, or JSON string for Response components
   timestamp: Date;
   attachment?: { name: string; type: string };
 }
@@ -34,7 +34,7 @@ export interface HubSpotTicket {
   email?: string;
 }
 
-// MDX Component Data Types
+// Response Component Data Types
 export type MDXComponentType =
   | "text"
   | "alert"

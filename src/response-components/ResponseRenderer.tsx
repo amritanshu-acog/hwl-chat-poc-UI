@@ -62,11 +62,11 @@ function groupChunksBySource(chunks: ContextChunk[]): Map<string, string[]> {
  * Parses message content and renders appropriate MDX components.
  * Handles both JSON array format and fallback to plain text/markdown.
  */
-export function MDXRenderer({ content, primaryColor, onChoiceSelect, onCreateTicket }: Props) {
+export function ResponseRenderer({ content, primaryColor, onChoiceSelect, onCreateTicket }: Props) {
     let components: MDXComponent[] | null = null
     let contextChunks: ContextChunk[] = []
 
-    console.log('🔍 MDXRenderer received content:', content)
+    console.log('🔍 ResponseRenderer received content:', content)
     console.log('🔍 Content type:', typeof content)
 
     try {
@@ -147,7 +147,7 @@ export function MDXRenderer({ content, primaryColor, onChoiceSelect, onCreateTic
                         return <Summary key={`comp-${idx}`} data={component.data as SummaryData} primaryColor={primaryColor} />
 
                     default:
-                        console.warn(`Unknown MDX component type: ${(component as any).type}`)
+                        console.warn(`Unknown response component type: ${(component as any).type}`)
                         return null
                 }
             })}

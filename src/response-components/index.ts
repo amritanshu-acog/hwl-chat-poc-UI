@@ -5,4 +5,4 @@ export { ImageBlock } from "./ImageBlock";
 export { Checklist } from "./Checklist";
 export { Escalation } from "./Escalation";
 export { Summary } from "./Summary";
-export { MDXRenderer } from "./MDXRenderer";
+export { ResponseRenderer } from "./ResponseRenderer";

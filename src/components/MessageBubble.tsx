@@ -2,7 +2,7 @@ import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
 import type { Message } from '../types'
 import type { Components } from 'react-markdown'
-import { MDXRenderer } from '../mdx'
+import { ResponseRenderer } from '../response-components'
 
 interface Props {
   message: Message
@@ -41,15 +41,13 @@ export function MessageBubble({ message, primaryColor, onQuickReply, onCreateTic
     ),
   }
 
-  // Try MDX rendering first, fallback to markdown
   const renderContent = () => {
     if (isUser) {
       return <p className="whitespace-pre-wrap break-words leading-relaxed">{message.content}</p>
     }
 
-    // Try MDX renderer first
     const mdxResult = (
-      <MDXRenderer
+      <ResponseRenderer
         content={message.content}
         primaryColor={primaryColor}
         onChoiceSelect={onQuickReply}
@@ -57,12 +55,10 @@ export function MessageBubble({ message, primaryColor, onQuickReply, onCreateTic
       />
     )
 
-    // If MDXRenderer returns null, it means content wasn't valid JSON, fallback to markdown
     try {
       JSON.parse(message.content)
       return mdxResult
     } catch {
-      // Not JSON, render as markdown
       return (
         <ReactMarkdown remarkPlugins={[remarkGfm]} components={markdownComponents}>
           {message.content}
