@@ -16,14 +16,14 @@ export function Escalation({ data, primaryColor, onCreateTicket }: Props) {
                     </svg>
                 </div>
                 <div className="flex-1">
-                    <h4 className="text-sm font-semibold text-gray-900 mb-1">{data.title}</h4>
-                    <p className="text-sm text-gray-700 leading-relaxed mb-3">{data.message}</p>
+                    <h4 className="text-xs font-semibold text-gray-900 mb-1">{data.title}</h4>
+                    <p className="text-xs text-gray-700 leading-relaxed mb-3">{data.message}</p>
                     {data.reason && (
-                        <p className="text-xs text-gray-600 italic mb-3">{data.reason}</p>
+                        <p className="text-[11px] text-gray-600 italic mb-3">{data.reason}</p>
                     )}
                     <button
                         onClick={onCreateTicket}
-                        className="inline-flex items-center gap-2 px-4 py-2 rounded-lg text-white text-sm font-medium transition-all hover:brightness-110 active:scale-95"
+                        className="inline-flex items-center gap-2 px-4 py-2 rounded-lg text-white text-xs font-medium transition-all hover:brightness-110 active:scale-95"
                         style={{ backgroundColor: primaryColor }}
                     >
                         <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">

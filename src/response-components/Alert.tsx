@@ -52,8 +52,8 @@ export function Alert({ data }: Props) {
                     )}
                 </div>
                 <div className="flex-1 min-w-0">
-                    <h4 className={`text-sm font-semibold ${config.title} mb-1`}>{data.title}</h4>
-                    <p className={`text-sm leading-relaxed ${config.body}`}>{data.body}</p>
+                    <h4 className={`text-xs font-semibold ${config.title} mb-1`}>{data.title}</h4>
+                    <p className={`text-xs leading-relaxed ${config.body}`}>{data.body}</p>
                 </div>
             </div>
         </div>

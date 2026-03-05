@@ -1,9 +1,8 @@
-import type { MDXComponent, TextData, AlertData, StepsData, ChoicesData, ImageBlockData, ChecklistData, EscalationData, SummaryData } from '../types'
+import type { MDXComponent, TextData, AlertData, StepsData, ChoicesData, ChecklistData, EscalationData, SummaryData } from '../types'
 import { Text } from './Text'
 import { Alert } from './Alert'
 import { Steps } from './Steps'
 import { Choices } from './Choices'
-import { ImageBlock } from './ImageBlock'
 import { Checklist } from './Checklist'
 import { Escalation } from './Escalation'
 import { Summary } from './Summary'
@@ -127,9 +126,6 @@ export function ResponseRenderer({ content, primaryColor, onChoiceSelect, onCrea
                             />
                         )
 
-                    case 'image':
-                        return <ImageBlock key={`comp-${idx}`} data={component.data as ImageBlockData} />
-
                     case 'checklist':
                         return <Checklist key={`comp-${idx}`} data={component.data as ChecklistData} primaryColor={primaryColor} />
 
@@ -154,7 +150,7 @@ export function ResponseRenderer({ content, primaryColor, onChoiceSelect, onCrea
 
             {groupedSources.size > 0 && (
                 <div className="mt-3 pt-3 border-t border-gray-200">
-                    <span className="text-xs font-semibold text-gray-500 mb-2 block">Sources</span>
+                    <span className="text-[11px] font-semibold text-gray-500 mb-2 block">Sources</span>
                     <div className="flex flex-col gap-3">
                         {Array.from(groupedSources.entries()).map(([pdfName, topics], i) => (
                             <div key={`source-group-${i}`}>
@@ -163,12 +159,12 @@ export function ResponseRenderer({ content, primaryColor, onChoiceSelect, onCrea
                                     <svg className="w-3.5 h-3.5 flex-shrink-0 text-red-500" fill="currentColor" viewBox="0 0 24 24">
                                         <path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8l-6-6zm0 1.5L18.5 9H14V3.5zM6 20V4h6v7h7v9H6z" />
                                     </svg>
-                                    <span className="text-xs font-semibold text-gray-700">{pdfName}</span>
+                                    <span className="text-[11px] font-semibold text-gray-700">{pdfName}</span>
                                 </div>
                                 {/* Topics under this PDF */}
                                 <div className="flex flex-col gap-0.5 pl-5">
                                     {topics.map((topic, j) => (
-                                        <span key={`topic-${i}-${j}`} className="text-xs text-gray-500 flex items-center gap-1.5">
+                                        <span key={`topic-${i}-${j}`} className="text-[11px] text-gray-500 flex items-center gap-1.5">
                                             <span className="w-1 h-1 rounded-full bg-gray-400 flex-shrink-0" />
                                             {topic}
                                         </span>

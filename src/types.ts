@@ -40,7 +40,6 @@ export type MDXComponentType =
   | "alert"
   | "steps"
   | "choices"
-  | "image"
   | "checklist"
   | "escalation"
   | "summary";
@@ -78,14 +77,6 @@ export interface ChoicesData {
   options: ChoiceData[];
 }
 
-export interface ImageBlockData {
-  src?: string;
-  alt?: string;
-  altText?: string;
-  caption?: string;
-  description?: string;
-}
-
 export interface ChecklistItem {
   id: string;
   label: string;
@@ -116,7 +107,6 @@ export interface MDXComponent {
     | AlertData
     | StepsData
     | ChoicesData
-    | ImageBlockData
     | ChecklistData
     | EscalationData
     | SummaryData;

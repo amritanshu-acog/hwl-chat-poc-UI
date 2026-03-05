@@ -27,7 +27,7 @@ export function Checklist({ data, primaryColor }: Props) {
     return (
         <div className="my-2">
             {data.title && (
-                <h4 className="text-sm font-semibold text-gray-900 mb-2">{data.title}</h4>
+                <h4 className="text-xs font-semibold text-gray-900 mb-2">{data.title}</h4>
             )}
             <div className="space-y-2">
                 {normalizedItems.map(item => (
@@ -49,7 +49,7 @@ export function Checklist({ data, primaryColor }: Props) {
                                 )}
                             </div>
                         </div>
-                        <span className={`text-sm flex-1 ${checkedItems[item.id] ? 'text-gray-500 line-through' : 'text-gray-800'}`}>
+                        <span className={`text-xs flex-1 ${checkedItems[item.id] ? 'text-gray-500 line-through' : 'text-gray-800'}`}>
                             {item.label}
                         </span>
                     </button>

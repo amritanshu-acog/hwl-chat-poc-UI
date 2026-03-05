@@ -15,7 +15,7 @@ export function Text({ data }: Props) {
             : String(parsed)
         return (
             <div className="my-1">
-                <pre className="text-sm text-gray-800 leading-relaxed bg-gray-100 rounded p-3 overflow-auto whitespace-pre-wrap">
+                <pre className="text-xs text-gray-800 leading-relaxed bg-gray-100 rounded p-3 overflow-auto whitespace-pre-wrap">
                     {body}
                 </pre>
             </div>
@@ -23,7 +23,7 @@ export function Text({ data }: Props) {
     } catch {
         return (
             <div className="my-1">
-                <p className="text-sm text-gray-800 leading-relaxed whitespace-pre-wrap">
+                <p className="text-xs text-gray-800 leading-relaxed whitespace-pre-wrap">
                     {body}
                 </p>
             </div>

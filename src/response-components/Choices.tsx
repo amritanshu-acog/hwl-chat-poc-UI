@@ -24,7 +24,7 @@ export function Choices({ data, onSelect, primaryColor }: Props) {
 
     return (
         <div className="my-2">
-            <p className="text-sm font-medium text-gray-900 mb-2">{data.question}</p>
+            <p className="text-xs font-medium text-gray-900 mb-2">{data.question}</p>
             <div className="space-y-2">
                 {data.options.map((option, idx) => {
                     const optionValue = option.value || option.label
@@ -36,8 +36,8 @@ export function Choices({ data, onSelect, primaryColor }: Props) {
                             onClick={() => handleSelect(optionValue)}
                             disabled={selectedValue !== null}
                             className={`w-full text-left px-3 py-2.5 rounded-lg border-2 transition-all group ${isSelected
-                                    ? 'border-blue-400 bg-blue-50'
-                                    : 'border-gray-200 hover:border-blue-300 bg-white hover:bg-blue-50'
+                                ? 'border-blue-400 bg-blue-50'
+                                : 'border-gray-200 hover:border-blue-300 bg-white hover:bg-blue-50'
                                 } disabled:cursor-not-allowed`}
                         >
                             <div className="flex items-start gap-2">
@@ -53,9 +53,9 @@ export function Choices({ data, onSelect, primaryColor }: Props) {
                                     )}
                                 </div>
                                 <div className="flex-1 min-w-0">
-                                    <p className="text-sm font-medium text-gray-900">{option.label}</p>
+                                    <p className="text-xs font-medium text-gray-900">{option.label}</p>
                                     {option.description && (
-                                        <p className="text-xs text-gray-600 mt-0.5">{option.description}</p>
+                                        <p className="text-[11px] text-gray-600 mt-0.5">{option.description}</p>
                                     )}
                                 </div>
                             </div>

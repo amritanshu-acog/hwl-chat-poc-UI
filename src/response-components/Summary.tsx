@@ -17,11 +17,11 @@ export function Summary({ data, primaryColor }: Props) {
                     </div>
                 </div>
                 <div className="flex-1">
-                    <h4 className="text-sm font-semibold text-gray-900 mb-1">{data.title}</h4>
-                    <p className="text-sm text-gray-700 leading-relaxed">{data.body}</p>                    {data.actions && data.actions.length > 0 && (
+                    <h4 className="text-xs font-semibold text-gray-900 mb-1">{data.title}</h4>
+                    <p className="text-xs text-gray-700 leading-relaxed">{data.body}</p>                    {data.actions && data.actions.length > 0 && (
                         <ul className="mt-2 space-y-1">
                             {data.actions.map((action, idx) => (
-                                <li key={idx} className="text-sm text-gray-700 flex items-start gap-1.5">
+                                <li key={idx} className="text-xs text-gray-700 flex items-start gap-1.5">
                                     <span className="text-green-600 mt-0.5">✓</span>
                                     <span>{action}</span>
                                 </li>
