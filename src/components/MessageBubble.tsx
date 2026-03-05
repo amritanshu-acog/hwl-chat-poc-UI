@@ -46,7 +46,7 @@ export function MessageBubble({ message, primaryColor, onQuickReply, onCreateTic
       return <p className="whitespace-pre-wrap break-words leading-relaxed">{message.content}</p>
     }
 
-    const mdxResult = (
+    const responseResult = (
       <ResponseRenderer
         content={message.content}
         primaryColor={primaryColor}
@@ -57,7 +57,7 @@ export function MessageBubble({ message, primaryColor, onQuickReply, onCreateTic
 
     try {
       JSON.parse(message.content)
-      return mdxResult
+      return responseResult
     } catch {
       return (
         <ReactMarkdown remarkPlugins={[remarkGfm]} components={markdownComponents}>

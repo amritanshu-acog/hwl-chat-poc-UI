@@ -35,7 +35,7 @@ export interface HubSpotTicket {
 }
 
 // Response Component Data Types
-export type MDXComponentType =
+export type ResponseComponentType =
   | "text"
   | "alert"
   | "steps"
@@ -100,8 +100,8 @@ export interface SummaryData {
   actions?: string[];
 }
 
-export interface MDXComponent {
-  type: MDXComponentType;
+export interface ResponseComponent {
+  type: ResponseComponentType;
   data:
     | TextData
     | AlertData

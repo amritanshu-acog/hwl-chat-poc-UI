@@ -1,4 +1,4 @@
-import type { MDXComponent, TextData, AlertData, StepsData, ChoicesData, ChecklistData, EscalationData, SummaryData } from '../types'
+import type { ResponseComponent, TextData, AlertData, StepsData, ChoicesData, ChecklistData, EscalationData, SummaryData } from '../types'
 import { Text } from './Text'
 import { Alert } from './Alert'
 import { Steps } from './Steps'
@@ -58,11 +58,11 @@ function groupChunksBySource(chunks: ContextChunk[]): Map<string, string[]> {
 }
 
 /**
- * Parses message content and renders appropriate MDX components.
+ * Parses message content and renders appropriate Response components.
  * Handles both JSON array format and fallback to plain text/markdown.
  */
 export function ResponseRenderer({ content, primaryColor, onChoiceSelect, onCreateTicket }: Props) {
-    let components: MDXComponent[] | null = null
+    let components: ResponseComponent[] | null = null
     let contextChunks: ContextChunk[] = []
 
     console.log('🔍 ResponseRenderer received content:', content)
