@@ -1,5 +1,17 @@
+/**
+ * useSession.ts
+ * -------------
+ * Manages session IDs and the sidebar session list.
+ *
+ * Session ID ownership:
+ *   demoMode=true  → client generates IDs (crypto.randomUUID)
+ *   demoMode=false → server returns session_id on first message;
+ *                    call confirmSessionId() to sync it back here
+ */
+
 import { useState, useCallback } from "react";
 import type { Session } from "../types";
+import { APP_CONFIG } from "../config";
 
 const CURRENT_KEY = "hwl_session_current";
 const INDEX_KEY = "hwl_sessions_index";
@@ -23,8 +35,10 @@ function loadIndex(): Session[] {
 }
 
 function saveIndex(sessions: Session[]): void {
-  const trimmed = sessions.slice(-MAX_SESSIONS);
-  localStorage.setItem(INDEX_KEY, JSON.stringify(trimmed));
+  localStorage.setItem(
+    INDEX_KEY,
+    JSON.stringify(sessions.slice(-MAX_SESSIONS)),
+  );
 }
 
 function getOrCreateSession(): string {
@@ -40,10 +54,40 @@ export function useSession() {
   const [sessions, setSessions] = useState<Session[]>(loadIndex);
 
   const startNewSession = useCallback(() => {
+    // In production the real session_id comes back from the server on
+    // the first message. We use a temporary client UUID until then.
     const id = crypto.randomUUID();
     localStorage.setItem(CURRENT_KEY, id);
     setSessionId(id);
     return id;
+  }, []);
+
+  /**
+   * Called by ChatPage after the first API response in a new session.
+   * Replaces the temporary client UUID with the server-assigned session_id.
+   * Only used in production mode — demo mode keeps client-generated IDs.
+   */
+  const confirmSessionId = useCallback((tempId: string, serverId: string) => {
+    if (APP_CONFIG.demoMode) return;
+    if (tempId === serverId) return;
+
+    // Migrate localStorage keys
+    const messages = localStorage.getItem(`hwl_session_${tempId}`);
+    if (messages) {
+      localStorage.setItem(`hwl_session_${serverId}`, messages);
+      localStorage.removeItem(`hwl_session_${tempId}`);
+    }
+
+    localStorage.setItem(CURRENT_KEY, serverId);
+    setSessionId(serverId);
+
+    setSessions((prev) => {
+      const updated = prev.map((s) =>
+        s.sessionId === tempId ? { ...s, sessionId: serverId } : s,
+      );
+      saveIndex(updated);
+      return updated;
+    });
   }, []);
 
   const switchSession = useCallback((id: string) => {
@@ -73,28 +117,31 @@ export function useSession() {
 
   const deleteSession = useCallback(
     (id: string) => {
+      // ✅ FIX: use `updated` derived from React state instead of re-reading
+      // localStorage via loadIndex(), which could be stale.
       setSessions((prev) => {
         const updated = prev.filter((s) => s.sessionId !== id);
         saveIndex(updated);
+
+        if (id === sessionId) {
+          if (updated.length > 0) {
+            // Switch to the most recent remaining session
+            const nextId = updated[updated.length - 1].sessionId;
+            localStorage.setItem(CURRENT_KEY, nextId);
+            setSessionId(nextId);
+          } else {
+            // No sessions left — create a fresh one
+            localStorage.removeItem(CURRENT_KEY);
+            const newId = crypto.randomUUID();
+            localStorage.setItem(CURRENT_KEY, newId);
+            setSessionId(newId);
+          }
+        }
+
         return updated;
       });
-      // Also remove the actual message content
-      localStorage.removeItem(`hwl_session_${id}`);
 
-      // If we deleted the current session, we need to handle it
-      if (id === sessionId) {
-        const remainingSessions = loadIndex();
-        if (remainingSessions.length > 0) {
-          const nextId = remainingSessions[0].sessionId;
-          localStorage.setItem(CURRENT_KEY, nextId);
-          setSessionId(nextId);
-        } else {
-          localStorage.removeItem(CURRENT_KEY);
-          const newId = crypto.randomUUID();
-          localStorage.setItem(CURRENT_KEY, newId);
-          setSessionId(newId);
-        }
-      }
+      localStorage.removeItem(`hwl_session_${id}`);
     },
     [sessionId],
   );
@@ -105,6 +152,7 @@ export function useSession() {
     startNewSession,
     switchSession,
     updateSessionPreview,
+    confirmSessionId,
     deleteSession,
   };
 }

@@ -6,12 +6,13 @@
  * Flow:
  *  1. Check URL query param (host app redirect)
  *  2. Fall back to sessionStorage (already authenticated)
- *  3. In demoMode: auto-generate a fake token so the page just works
+ *  3. In demoMode: generate a real signed token using jose
  *  4. Otherwise: show an "Unauthorized" gate
  */
 
 import { useState, useEffect } from "react";
 import { APP_CONFIG } from "../config";
+import { generateDemoToken } from "../utils/generateDemoToken";
 
 export type AuthState =
   | { status: "loading" }
@@ -19,10 +20,10 @@ export type AuthState =
   | { status: "unauthenticated"; reason: string };
 
 export interface JWTPayload {
-  sub: string; // user id
-  name?: string; // display name
+  sub: string;
+  name?: string;
   email?: string;
-  exp?: number; // expiry unix timestamp
+  exp?: number;
   iat?: number;
   [key: string]: unknown;
 }
@@ -40,22 +41,6 @@ function decodeJWT(token: string): JWTPayload | null {
   }
 }
 
-/** Creates a fake JWT for demo purposes only. */
-function makeDemoToken(): string {
-  const header = btoa(JSON.stringify({ alg: "HS256", typ: "JWT" }));
-  const payload = btoa(
-    JSON.stringify({
-      sub: "demo-user-001",
-      name: "Demo User",
-      email: "demo@hwl.com",
-      iat: Math.floor(Date.now() / 1000),
-      exp: Math.floor(Date.now() / 1000) + 3600,
-    }),
-  );
-  const sig = btoa("demo-signature");
-  return `${header}.${payload}.${sig}`;
-}
-
 export function useAuth(): AuthState {
   const [authState, setAuthState] = useState<AuthState>({ status: "loading" });
 
@@ -68,7 +53,6 @@ export function useAuth(): AuthState {
       const payload = decodeJWT(urlToken);
       if (payload) {
         sessionStorage.setItem(APP_CONFIG.jwtStorageKey, urlToken);
-        // Clean token from URL without reload
         params.delete(APP_CONFIG.jwtParamName);
         const cleanUrl =
           window.location.pathname +
@@ -85,7 +69,6 @@ export function useAuth(): AuthState {
     if (stored) {
       const payload = decodeJWT(stored);
       if (payload) {
-        // Check expiry
         if (payload.exp && payload.exp < Date.now() / 1000) {
           sessionStorage.removeItem(APP_CONFIG.jwtStorageKey);
         } else {
@@ -95,12 +78,13 @@ export function useAuth(): AuthState {
       }
     }
 
-    // 3. Demo mode auto-auth
+    // 3. Demo mode — generate a real signed token
     if (APP_CONFIG.demoMode) {
-      const demoToken = makeDemoToken();
-      const payload = decodeJWT(demoToken)!;
-      sessionStorage.setItem(APP_CONFIG.jwtStorageKey, demoToken);
-      setAuthState({ status: "authenticated", token: demoToken, payload });
+      generateDemoToken(APP_CONFIG.jwtSecret).then((demoToken) => {
+        const payload = decodeJWT(demoToken)!;
+        sessionStorage.setItem(APP_CONFIG.jwtStorageKey, demoToken);
+        setAuthState({ status: "authenticated", token: demoToken, payload });
+      });
       return;
     }
 

@@ -11,7 +11,7 @@ export const APP_CONFIG = {
 
   // ── Feature flags ────────────────────────────────────
   /** When true the app uses dummy.ts data; when false it calls `apiUrl`. */
-  demoMode: false,
+  demoMode: true,
 
   // ── Branding ─────────────────────────────────────────
   title: "HWL Assistant",
@@ -27,12 +27,13 @@ export const APP_CONFIG = {
    */
   jwtParamName: "token", // URL query param name the host app passes
   jwtStorageKey: "hwl_jwt_token",
+  jwtSecret: import.meta.env.VITE_JWT_SECRET ?? "", // ← add this
 
   // ── Chat defaults ─────────────────────────────────────
   placeholder: "Ask me anything…",
   quickReplies: [
-    { icon: "doc", text: "How do I create a requisition?" },
-    { icon: "people", text: "Explain the onboarding process" },
-    { icon: "clock", text: "How do I request leave?" },
+    { icon: "people", text: "How do I propose a candidate?" },
+    { icon: "doc", text: "What are the Onboarding Stages?" },
+    { icon: "clock", text: "How do I add Expense?" },
   ],
 } as const;
