@@ -1,21 +1,10 @@
-/**
- * types/llmResponse.ts
- */
-
 export type ResponseAction =
   | "clarify"
   | "respond"
   | "not_found"
   | "quota_exceeded";
 
-export type ResponseType =
-  | "clarify"
-  | "answer"
-  | "options"
-  | "mixed"
-  | "notfound"
-  | "quota_exceeded"
-  | "faq"; // ← new
+export type ResponseType = "answer" | "options" | "mixed" | "notfound";
 
 export interface LLMAlert {
   severity: "warning" | "info" | "danger";
@@ -51,17 +40,15 @@ export interface LLMEscalation {
   reason?: string;
 }
 
+export interface LLMGlossaryItem {
+  term: string;
+  definition: string;
+}
+
 export interface LLMCitation {
   chunk_id: string;
   source: string;
 }
-
-// ── new ──────────────────────────────────────────────
-export interface LLMFaqItem {
-  question: string;
-  answer: string;
-}
-// ─────────────────────────────────────────────────────
 
 export interface LLMResponse {
   action: ResponseAction;
@@ -71,6 +58,7 @@ export interface LLMResponse {
   intro?: string | null;
   steps: LLMStep[] | null;
   items: string[] | null;
+  glossaryItems?: LLMGlossaryItem[] | null;
   options: LLMOption[] | null;
   summary: LLMSummary | null;
   escalation: LLMEscalation | null;
@@ -78,6 +66,4 @@ export interface LLMResponse {
   stages: LLMFunnelStage[] | null;
   followUp?: string | null;
   citations: LLMCitation[];
-  faqItems?: LLMFaqItem[] | null; // ← new
-  quotaMessage?: string | null; // ← new
 }

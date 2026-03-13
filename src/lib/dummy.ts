@@ -1,22 +1,3 @@
-/**
- * dummy2.ts
- * ---------
- * 12 entries — all 6 response_types used twice each (faq counts as one).
- * Every MDX component is used exactly once across the set.
- *
- * Components used:
- *  Alert         → entry 2  (initial setup — warning)
- *  Steps         → entry 2  (initial setup)
- *  Checklist     → entry 4  (propose candidate)
- *  Choices       → entry 5  (expense type)
- *  Escalation    → entry 11 (notfound — timesheet)
- *  Summary       → entry 7  (onboarding funnel summary)
- *  Mermaid       → entry 8  (timecard exception flow)
- *  FunnelChart   → entry 7  (onboarding stages)
- *  Faq           → entry 9  (common errors)
- *  QuotaExceeded → entry 10 (quota_exceeded)
- */
-
 import type { LLMResponse } from "../types/llmResponse";
 
 export interface DummyEntry {
@@ -27,13 +8,13 @@ export interface DummyEntry {
 export const DUMMY_QA2: DummyEntry[] = [
   /* ══════════════════════════════════════════════════════════════
      1. CLARIFY — Greeting
-     Component: Choices (via options field → rendered as <Choices>)
+     action: clarify | response_type: answer (Choices)
   ══════════════════════════════════════════════════════════════ */
   {
-    keywords: ["hi", "hello", "hey", "help", "what can you do"],
+    keywords: ["hi", "hello", "hey", "what can you do"],
     response: {
       action: "clarify",
-      response_type: "clarify",
+      response_type: "answer",
       alert: null,
       title: "Hi there! What do you need help with?",
       intro:
@@ -68,48 +49,122 @@ export const DUMMY_QA2: DummyEntry[] = [
       stages: null,
       followUp: null,
       citations: [],
-      faqItems: null,
-      quotaMessage: null,
     },
   },
 
+  /* ══════════════════════════════════════════════════════════════
+       FAQ — Error 502 Bad Gateway
+  ══════════════════════════════════════════════════════════════ */
+  {
+    keywords: [
+      "502 error",
+      "bad gateway",
+      "getting 502 error",
+      "502 bad gateway",
+    ],
+    response: {
+      action: "respond",
+      response_type: "answer",
+      alert: null,
+      title: "Error 502 Bad Gateway",
+      intro: null,
+      steps: null,
+      items: null,
+      options: null,
+      summary: {
+        title: "",
+        body: "It is an internal server issue. Please contact the agency's internal IT Department.",
+      },
+      escalation: null,
+      chart: null,
+      stages: null,
+      followUp: null,
+      citations: [
+        {
+          chunk_id: "2f1a41a3-d03a-41aa-b245-bb05be4da066",
+          source: "FAQ.pdf",
+        },
+      ],
+    },
+  },
+
+  /* ══════════════════════════════════════════════════════════════
+       FAQ — Error 20
+  ══════════════════════════════════════════════════════════════ */
+  {
+    keywords: ["error 20", "getting 20 error", "what does error 20 mean"],
+    response: {
+      action: "respond",
+      response_type: "answer",
+      alert: null,
+      title: "Error 20",
+      intro: null,
+      steps: null,
+      items: null,
+      options: null,
+      summary: {
+        title: "",
+        body: "Platform is down at the AWS level — will need to contact Rajesh Surve immediately.",
+      },
+      escalation: null,
+      chart: null,
+      stages: null,
+      followUp: null,
+      citations: [
+        {
+          chunk_id: "2f1a41a3-d03a-41aa-b245-bb05be4da066",
+          source: "FAQ.pdf",
+        },
+      ],
+    },
+  },
   /* ══════════════════════════════════════════════════════════════
      2. ANSWER — Initial Setup
      Component: Alert + Steps
   ══════════════════════════════════════════════════════════════ */
   {
     keywords: [
-      "initial setup",
-      "first time login",
-      "reset password",
-      "setup account",
+      "initial setup for HWL",
+      "first-time HWL login",
+      "reset HWL password",
+      "verify HWL email",
+      "select job group in HWL",
+      "facility mapping HWL",
+      "self-mapping HWL",
+      "HWL notification message",
+      "email preferences HWL",
     ],
     response: {
       action: "respond",
       response_type: "answer",
-      alert: {
-        severity: "warning",
-        title: "Job Group must be selected",
-        body: "After logging in, you must select a Job Group from the Dashboard or the system will not display relevant requisitions and resources.",
-      },
-      title: "Initial HWL Account Setup",
-      intro: "Follow these steps the first time you log in to HWL.",
+      alert: null,
+      title: "Initial Set Up",
+      intro:
+        "This procedure is for new HWL users who are logging in for the first time. These actions are necessary to ensure the system generates the desired information and operates correctly.",
       steps: [
         {
-          title: "Access & Reset Password",
-          body: "Open the URL from your welcome email. Click **Reset Password** and follow the prompts to set a new password.",
+          title: "Initial Access, Password Reset, Verify Email",
+          body: "New users will receive a system-generated email containing a URL, temporary username, and password. Click the URL to access the login page. Select **Reset Password** to initiate the password setup process. Follow the onscreen prompts to set up a new password and log in successfully.",
         },
         {
-          title: "Select Job Group",
-          body: "From the Dashboard, find the **Select Job Group** dropdown on the right side and choose the appropriate group.",
+          title: "Selecting Job Group",
+          body: "From the Dashboard tab, locate the **Select Job Group** dropdown on the right side. Choose the appropriate job group to display relevant resources.",
         },
         {
-          title: "Map Your Facilities",
-          body: "Go to **Settings > Self Facility/Location Mapping**. Mark facilities to include with a green check or exclude with a red X. Click to save — no further action needed.",
+          title: "Self Facility/Location Mapping",
+          body: "Navigate to the HWL menu and select **Settings**, then **Self Facility/Location Mapping**. Two categories will appear: **Show Excluded** and **Show Included**. Click into the desired category to update preferences: mark facilities you want to include with a green check and mark facilities you want to exclude with a red X. Click the check or X to save preferences. Once saved, no further action is required.",
         },
         {
-          title: "Set Email Preferences",
-          body: "Go to **Settings > Email Preference**. Choose **Default to Select All Job Titles** or configure manually under the **Email Subscribed** tab.",
+          title: "HWL Notification Message",
+          body: "Upon initial login, if email preferences are not set, a notification message will appear. To stop the message from appearing, set email preferences or check the **Do not show this message** box.",
+        },
+        {
+          title: "Verify | Change Email",
+          body: "Navigate to the **Verify | Change Email** screen under **Settings**. Options: **Default Selection** — enroll to receive all HWL notifications automatically. **Manual Configuration** — customize email preferences via the Email Preference page. **Exit** — no action is taken. The message will reappear unless **Do not show this message again** is selected.",
+        },
+        {
+          title: "Email Preference Management",
+          body: "Navigate to **Settings** then **Email Preference**. To subscribe to job titles, select **Job Titles Subscribed** and click **Default to Select All Job Titles** or manually select specific titles. To manage email notifications, navigate to the **Email Subscribed** tab and mark desired notifications in green to receive them or gray to opt out.",
         },
       ],
       items: null,
@@ -119,21 +174,19 @@ export const DUMMY_QA2: DummyEntry[] = [
       chart: null,
       stages: null,
       followUp:
-        "Once these steps are done, your dashboard will display the correct requisitions and staff pool data.",
+        "Facility mapping and email preferences can be updated at any time. Notifications will continue to appear until preferences are set or the Do not show this message box is checked.",
       citations: [
         {
           chunk_id: "e32995ae-c3e2-4d66-a773-18d458fcdd8f",
           source: "HWL Agency_HWL User Guide_ V4.pdf",
         },
       ],
-      faqItems: null,
-      quotaMessage: null,
     },
   },
 
   /* ══════════════════════════════════════════════════════════════
-     3. CLARIFY — Timecard status (which status are you in?)
-     Component: Choices (via options)
+     3. CLARIFY — Timecard status
+     action: clarify | response_type: options (Choices)
   ══════════════════════════════════════════════════════════════ */
   {
     keywords: [
@@ -144,7 +197,7 @@ export const DUMMY_QA2: DummyEntry[] = [
     ],
     response: {
       action: "clarify",
-      response_type: "clarify",
+      response_type: "options",
       alert: null,
       title: "What status is the timecard in?",
       intro:
@@ -184,8 +237,6 @@ export const DUMMY_QA2: DummyEntry[] = [
           source: "HWL Agency_HWL User Guide_ V4.pdf",
         },
       ],
-      faqItems: null,
-      quotaMessage: null,
     },
   },
 
@@ -229,8 +280,6 @@ export const DUMMY_QA2: DummyEntry[] = [
           source: "HWL Agency_HWL User Guide_ V4.pdf",
         },
       ],
-      faqItems: null,
-      quotaMessage: null,
     },
   },
 
@@ -270,8 +319,6 @@ export const DUMMY_QA2: DummyEntry[] = [
           source: "HWL Agency_HWL User Guide_ V4.pdf",
         },
       ],
-      faqItems: null,
-      quotaMessage: null,
     },
   },
 
@@ -311,8 +358,6 @@ export const DUMMY_QA2: DummyEntry[] = [
           source: "HWL Agency_HWL User Guide_ V4.pdf",
         },
       ],
-      faqItems: null,
-      quotaMessage: null,
     },
   },
 
@@ -349,8 +394,6 @@ export const DUMMY_QA2: DummyEntry[] = [
           source: "HWL Agency_HWL User Guide_ V4.pdf",
         },
       ],
-      faqItems: null,
-      quotaMessage: null,
     },
   },
 
@@ -395,18 +438,17 @@ export const DUMMY_QA2: DummyEntry[] = [
           source: "HWL Agency_HWL User Guide_ V4.pdf",
         },
       ],
-      faqItems: null,
-      quotaMessage: null,
     },
   },
 
   /* ══════════════════════════════════════════════════════════════
      5. OPTIONS — Expense type
-     Component: Choices (via options)
+     Component: Choices
   ══════════════════════════════════════════════════════════════ */
   {
     keywords: [
       "add expense",
+      "submitting expense",
       "submit expense",
       "expense type",
       "candidate expense",
@@ -452,8 +494,6 @@ export const DUMMY_QA2: DummyEntry[] = [
           source: "HWL Agency_HWL User Guide_ V4.pdf",
         },
       ],
-      faqItems: null,
-      quotaMessage: null,
     },
   },
 
@@ -497,8 +537,6 @@ export const DUMMY_QA2: DummyEntry[] = [
           source: "HWL Agency_HWL User Guide_ V4.pdf",
         },
       ],
-      faqItems: null,
-      quotaMessage: null,
     },
   },
 
@@ -542,8 +580,6 @@ export const DUMMY_QA2: DummyEntry[] = [
           source: "HWL Agency_HWL User Guide_ V4.pdf",
         },
       ],
-      faqItems: null,
-      quotaMessage: null,
     },
   },
 
@@ -587,8 +623,6 @@ export const DUMMY_QA2: DummyEntry[] = [
           source: "HWL Agency_HWL User Guide_ V4.pdf",
         },
       ],
-      faqItems: null,
-      quotaMessage: null,
     },
   },
 
@@ -632,17 +666,15 @@ export const DUMMY_QA2: DummyEntry[] = [
           source: "HWL Agency_HWL User Guide_ V4.pdf",
         },
       ],
-      faqItems: null,
-      quotaMessage: null,
     },
   },
 
   /* ══════════════════════════════════════════════════════════════
      6. OPTIONS — Invoice type
-     Component: Choices (via options)
+     Component: Choices
   ══════════════════════════════════════════════════════════════ */
   {
-    keywords: ["view invoices", "find invoice", "invoice help"],
+    keywords: ["viewing invoices", "find invoice", "invoice help"],
     response: {
       action: "respond",
       response_type: "options",
@@ -674,8 +706,6 @@ export const DUMMY_QA2: DummyEntry[] = [
           source: "HWL Agency_HWL User Guide_ V4.pdf",
         },
       ],
-      faqItems: null,
-      quotaMessage: null,
     },
   },
 
@@ -720,8 +750,6 @@ export const DUMMY_QA2: DummyEntry[] = [
           source: "HWL Agency_Invoices V3.pdf",
         },
       ],
-      faqItems: null,
-      quotaMessage: null,
     },
   },
 
@@ -762,14 +790,12 @@ export const DUMMY_QA2: DummyEntry[] = [
           source: "HWL Agency_HWL User Guide_ V4.pdf",
         },
       ],
-      faqItems: null,
-      quotaMessage: null,
     },
   },
 
   /* ══════════════════════════════════════════════════════════════
      7. MIXED — Candidate Onboarding Lifecycle
-     Component: FunnelChart + Summary
+     Component: FunnelChart
   ══════════════════════════════════════════════════════════════ */
   {
     keywords: [
@@ -823,8 +849,6 @@ export const DUMMY_QA2: DummyEntry[] = [
           source: "HWL Agency_HWL User Guide_ V4.pdf",
         },
       ],
-      faqItems: null,
-      quotaMessage: null,
     },
   },
 
@@ -832,36 +856,52 @@ export const DUMMY_QA2: DummyEntry[] = [
      8. MIXED — Timecard exception flow
      Component: Steps + Mermaid
   ══════════════════════════════════════════════════════════════ */
+  /* ══════════════════════════════════════════════════════════════
+     9. MIXED — Timecard status lifecycle flow
+     Component: Steps + Mermaid
+  ══════════════════════════════════════════════════════════════ */
   {
     keywords: [
-      "timecard exception",
-      "exception in",
-      "timecard correction",
-      "approved timecard correction",
+      "timecard status",
+      "submitted timecard",
+      "approved timecard",
+      "timecard lifecycle",
+      "timecard invoicing",
+      "timecard approval process",
+      "pre-invoice timecard",
+      "invoiced timecard",
     ],
     response: {
       action: "respond",
       response_type: "mixed",
       alert: null,
-      title: "Timecard Exception Process",
+      title: "Timecard Status Lifecycle",
       intro:
-        "Use this when a timecard is already Approved and needs a correction.",
+        "Each timecard moves through a series of statuses before it reaches invoicing. Here's what to do at every stage.",
       steps: [
         {
-          title: "Open the Timecard",
-          body: "Go to the **Approved** tab on the Timecards page and locate the timecard.",
+          title: "Submitted — Review & Act",
+          body: "Open the timecard from the **Submitted** tab. Verify shift date, facility, department, candidate, and time punches. **Edit** to correct punches or department, or **Reject** with a written reason. Approved timecards move to the Approved tab.",
         },
         {
-          title: "Create an Exception",
-          body: "Update time punches or department, upload supporting documents, add comments, and submit the exception for facility review.",
+          title: "Approved — Raise an Exception if Needed",
+          body: "If a correction is required after approval, create an exception: update time punches or department, attach supporting documents, add comments, and submit for facility review. The timecard will move to **Exception OUT**.",
         },
         {
-          title: "Monitor Exception OUT",
-          body: "The timecard moves to **Exception OUT**. Wait for the facility to respond.",
+          title: "Exception IN — Respond to Facility",
+          body: "The facility has returned the timecard with comments or proposed changes. Review their feedback, update the relevant details or upload documents, then resubmit the exception.",
         },
         {
-          title: "Respond to Exception IN",
-          body: "When the facility returns it, review their comments, update details, and resubmit.",
+          title: "Exception OUT — Wait for Facility",
+          body: "The timecard is pending a facility decision. Monitor this tab and take action only if it returns to **Exception IN**.",
+        },
+        {
+          title: "Pre-Invoice — Final Corrections",
+          body: "Make any last corrections before the invoice is generated. If changes are still needed, raise an exception and submit for facility review.",
+        },
+        {
+          title: "Invoiced — Escalate if Required",
+          body: "No further edits can be made once a timecard is Invoiced. Contact your **HWL Account Manager** for any adjustments or corrections at this stage.",
         },
       ],
       items: null,
@@ -869,147 +909,34 @@ export const DUMMY_QA2: DummyEntry[] = [
       summary: null,
       escalation: null,
       chart: `flowchart TD
-  A[Approved Timecard] --> B[Agency Creates Exception]
-  B --> C[Exception OUT — Pending Facility]
-  C --> D{Facility Response}
-  D -->|Changes needed| E[Exception IN — Agency Action Required]
-  E --> B
-  D -->|Accepted| F[Returns to Approved for Invoicing]`,
+  A[Timecard Submitted] --> B{Agency Review}
+  B -->|Edit or Approve| C[Approved]
+  B -->|Reject| D[Rejected — Reason Provided]
+  C --> E{Correction Needed?}
+  E -->|No| F[Pre-Invoice]
+  E -->|Yes| G[Agency Creates Exception]
+  G --> H[Exception OUT — Pending Facility]
+  H --> I{Facility Response}
+  I -->|Changes Requested| J[Exception IN — Agency Action]
+  J --> G
+  I -->|Accepted| C
+  F --> K[Invoiced]
+  K --> L[Contact HWL Account Manager for Adjustments]`,
       stages: null,
       followUp:
-        "If the timecard is already Invoiced, contact your HWL Account Manager — exceptions cannot be raised at that stage.",
+        "Only time punches and department can be edited directly. Any other changes require creating a new timecard entirely.",
       citations: [
         {
           chunk_id: "36dff967-dc09-43cf-bdec-a4cbae3a4059",
           source: "HWL Agency_HWL User Guide_ V4.pdf",
         },
       ],
-      faqItems: null,
-      quotaMessage: null,
     },
   },
 
   /* ══════════════════════════════════════════════════════════════
-     9. FAQ — Common platform errors
-     Component: Faq
-  ══════════════════════════════════════════════════════════════ */
-  {
-    keywords: ["502", "bad gateway"],
-    response: {
-      action: "respond",
-      response_type: "faq",
-      alert: null,
-      title: "Error 502 — Bad Gateway",
-      intro: null,
-      steps: null,
-      items: null,
-      options: null,
-      summary: null,
-      escalation: null,
-      chart: null,
-      stages: null,
-      followUp: null,
-      citations: [{ chunk_id: "2f1a41a3", source: "FAQ.pdf" }],
-      faqItems: [
-        {
-          question: "Error 502 — Bad Gateway",
-          answer:
-            "This is an internal server issue. Please contact your agency's internal IT Department.",
-        },
-      ],
-      quotaMessage: null,
-    },
-  },
-  {
-    keywords: ["error 15", "special characters"],
-    response: {
-      action: "respond",
-      response_type: "faq",
-      alert: null,
-      title: "Error 15 — Special Characters in Staff Pool",
-      intro: null,
-      steps: null,
-      items: null,
-      options: null,
-      summary: null,
-      escalation: null,
-      chart: null,
-      stages: null,
-      followUp: null,
-      citations: [{ chunk_id: "2f1a41a3", source: "FAQ.pdf" }],
-      faqItems: [
-        {
-          question: "Error 15 — Special Characters in Staff Pool",
-          answer:
-            "Triggered when adding a staff member with special characters in their name (e.g. apostrophes). Remove the special character and retry.",
-        },
-      ],
-      quotaMessage: null,
-    },
-  },
-  {
-    keywords: ["error 20"],
-    response: {
-      action: "respond",
-      response_type: "faq",
-      alert: null,
-      title: "Error 20 — Platform Down",
-      intro: null,
-      steps: null,
-      items: null,
-      options: null,
-      summary: null,
-      escalation: null,
-      chart: null,
-      stages: null,
-      followUp: null,
-      citations: [{ chunk_id: "2f1a41a3", source: "FAQ.pdf" }],
-      faqItems: [
-        {
-          question: "Error 20 — Platform Down",
-          answer:
-            "The platform is down at the AWS level. Contact Rajesh Surve immediately.",
-        },
-      ],
-      quotaMessage: null,
-    },
-  },
-
-  /* ══════════════════════════════════════════════════════════════
-     10. QUOTA EXCEEDED — Session limit
-     Component: QuotaExceeded
-  ══════════════════════════════════════════════════════════════ */
-  {
-    keywords: [
-      "quota exceeded",
-      "limit reached",
-      "too many messages",
-      "usage limit",
-    ],
-    response: {
-      action: "quota_exceeded",
-      response_type: "quota_exceeded",
-      alert: null,
-      title: "Quota Exceeded",
-      intro: null,
-      steps: null,
-      items: null,
-      options: null,
-      summary: null,
-      escalation: null,
-      chart: null,
-      stages: null,
-      followUp: null,
-      citations: [],
-      faqItems: null,
-      quotaMessage:
-        "You've reached your message limit for this session. Please start a new chat to continue.",
-    },
-  },
-
-  /* ══════════════════════════════════════════════════════════════
-     11. NOT FOUND — Off-topic (payroll / HR)
-     Component: Alert + Escalation
+     9. NOT FOUND — Off-topic (payroll / HR)
+     Component: NotFound + Escalation
   ══════════════════════════════════════════════════════════════ */
   {
     keywords: ["payroll", "salary", "hr", "human resources", "leave request"],
@@ -1021,8 +948,8 @@ export const DUMMY_QA2: DummyEntry[] = [
         title: "Not found in knowledge base",
         body: "I couldn't find anything related to payroll or HR in the HWL knowledge base.",
       },
-      title: "No relevant documentation found",
-      intro: "Here are some topics I can help with instead:",
+      title: "",
+      intro: null,
       steps: null,
       items: null,
       options: [
@@ -1054,14 +981,12 @@ export const DUMMY_QA2: DummyEntry[] = [
       stages: null,
       followUp: null,
       citations: [],
-      faqItems: null,
-      quotaMessage: null,
     },
   },
 
   /* ══════════════════════════════════════════════════════════════
-     12. NOT FOUND — Off-topic (general / unrelated)
-     Component: Alert (danger) + options fallback
+     10. NOT FOUND — Off-topic (general / unrelated)
+     Component: NotFound + Alert
   ══════════════════════════════════════════════════════════════ */
   {
     keywords: [
@@ -1080,8 +1005,8 @@ export const DUMMY_QA2: DummyEntry[] = [
         title: "Outside scope",
         body: "This assistant only covers HWL platform tasks. I can't help with that topic.",
       },
-      title: "No relevant documentation found",
-      intro: "Here are the topics I can help with:",
+      title: "",
+      intro: null,
       steps: null,
       items: null,
       options: [
@@ -1107,17 +1032,352 @@ export const DUMMY_QA2: DummyEntry[] = [
       chart: null,
       stages: null,
       followUp: null,
-      citations: [],
-      faqItems: null,
-      quotaMessage: null,
+      citations: [
+        {
+          chunk_id: "dd741cb7-35a8-4b5c-b649-685536919389",
+          source: "HWL Agency_HWL User Guide_ V4.pdf",
+        },
+      ],
+    },
+  },
+
+  /* ══════════════════════════════════════════════════════════════
+     REQUISITIONS — Main entry point
+     Component: options — Choices
+  ══════════════════════════════════════════════════════════════ */
+  {
+    keywords: [
+      "where do i find requisitions",
+      "how do i access requisitions",
+      "i need help with requisitions",
+      "requisition help",
+    ],
+    response: {
+      action: "respond",
+      response_type: "options",
+      alert: null,
+      title: "What do you need help with on Requisitions?",
+      intro: "Select a topic and I'll walk you through it.",
+      steps: null,
+      items: null,
+      options: [
+        {
+          label: "What does the Requisitions page show?",
+          value: "requisition page details",
+          description: "Columns, buttons, and how to read the page",
+        },
+        {
+          label: "How do I propose a candidate?",
+          value: "how do i propose a candidate",
+          description: "Step-by-step guide to submitting a candidate",
+        },
+        {
+          label: "candidate is in screening what does that mean",
+          value: "candidate is in screening what does that mean",
+          description: "Onboarding stages from screening to orientation",
+        },
+        {
+          label: "My candidate shows Backup Profile — what do I do?",
+          value: "what is backup profile status",
+          description: "What backup status means and next steps",
+        },
+      ],
+      summary: null,
+      escalation: null,
+      chart: null,
+      stages: null,
+      followUp: null,
+      citations: [
+        {
+          chunk_id: "dd741cb7-35a8-4b5c-b649-685536919389",
+          source: "HWL Agency_HWL User Guide_ V4.pdf",
+        },
+      ],
+    },
+  },
+
+  /* ══════════════════════════════════════════════════════════════
+     REQUISITIONS — Subflow: Page details
+     Component: answer — Checklist
+  ══════════════════════════════════════════════════════════════ */
+  {
+    keywords: [
+      "requisition page details",
+      "what does the requisition page show",
+      "what are the columns on requisition",
+      "how do i read the requisition page",
+      "what information is on the requisition page",
+    ],
+    response: {
+      action: "respond",
+      response_type: "answer",
+      alert: null,
+      title: "What the Requisitions Page Shows",
+      intro:
+        "The Requisitions page gives you a full picture of every open requisition and the candidates proposed against them. Here is what each column means.",
+      steps: null,
+      items: null,
+      glossaryItems: [
+        {
+          term: "Facility/System",
+          definition: "The broadcasting facility name and its location.",
+        },
+        {
+          term: "Specialty/Dept.",
+          definition: "The department the candidate will be working in.",
+        },
+        {
+          term: "Shift Type",
+          definition: "The working shift the candidate is expected to cover.",
+        },
+        {
+          term: "Job Title",
+          definition:
+            "The appropriate job titles associated with the requisition.",
+        },
+        {
+          term: "Requisition",
+          definition: "The requisition name. Click it to see full details.",
+        },
+        {
+          term: "Days Posted",
+          definition: "How long the requisition has been live.",
+        },
+        {
+          term: "Group Order",
+          definition: "Indicates whether multiple candidates are needed.",
+        },
+        {
+          term: "Start/End",
+          definition: "The desired start and end dates for the placement.",
+        },
+        {
+          term: "Candidate Status",
+          definition:
+            "Shows the current onboarding stage of each proposed candidate.",
+        },
+        {
+          term: "Action/Status",
+          definition:
+            "Buttons to take action such as proposing candidates or viewing schedules.",
+        },
+      ],
+      options: null,
+      summary: null,
+      escalation: null,
+      chart: null,
+      stages: null,
+      followUp:
+        "Click the Requisition name to drill into full details, or use the Action/Status buttons to take action on a candidate.",
+      citations: [
+        {
+          chunk_id: "dd741cb7-35a8-4b5c-b649-685536919389",
+          source: "HWL Agency_HWL User Guide_ V4.pdf",
+        },
+      ],
+    },
+  },
+
+  /* ══════════════════════════════════════════════════════════════
+     REQUISITIONS — Subflow: Propose a candidate
+     Component: answer — Alert + Steps
+  ══════════════════════════════════════════════════════════════ */
+  {
+    keywords: [
+      "how do i propose a candidate",
+      "propose a candidate",
+      "submit a candidate",
+      "i want to propose someone",
+      "how to submit candidate to requisition",
+      "i need to propose a candidate",
+      "candidate not showing up to propose",
+      "propose candidate button",
+    ],
+    response: {
+      action: "respond",
+      response_type: "answer",
+      alert: {
+        severity: "warning",
+        title: "Candidate must already be in your Staff Pool",
+        body: "Before you can propose someone, they need to exist in your Staff Pool. If you cannot find the candidate in the proposal screen, check your Staff Pool first.",
+      },
+      title: "How to Propose a Candidate",
+      intro:
+        "Here are the steps to propose a candidate against an open requisition.",
+      steps: [
+        {
+          title: "Go to the Requisitions Page",
+          body: "From the HWL menu, navigate to **Requisitions** to see all open requisitions.",
+        },
+        {
+          title: "Find the Requisition",
+          body: "Locate the requisition you want to fill and click **Propose Candidate** in the Action/Status column.",
+        },
+        {
+          title: "Select the Candidate",
+          body: "A list of your Staff Pool will appear. Select the candidate you want to propose.",
+        },
+        {
+          title: "Fill in Proposal Details",
+          body: "Complete all required fields — this includes rates, availability dates, and any attestation questions.",
+        },
+        {
+          title: "Submit the Proposal",
+          body: "Click **Submit**. The candidate will immediately move to **In Screening** status and appear in the Candidate Status column.",
+        },
+      ],
+      items: null,
+      options: null,
+      summary: null,
+      escalation: null,
+      chart: null,
+      stages: null,
+      followUp:
+        "Once submitted, keep an eye on the Candidate Status column to track where your candidate is in the onboarding process.",
+      citations: [
+        {
+          chunk_id: "dd741cb7-35a8-4b5c-b649-685536919389",
+          source: "HWL Agency_HWL User Guide_ V4.pdf",
+        },
+      ],
+    },
+  },
+
+  /* ══════════════════════════════════════════════════════════════
+     REQUISITIONS — Subflow: Onboarding stages
+     Component: mixed — FunnelChart + Steps + Mermaid
+  ══════════════════════════════════════════════════════════════ */
+  {
+    keywords: [
+      "what happens after i propose a candidate",
+      "candidate onboarding stages",
+      "onboarding process",
+      "onboarding lifecycle",
+      "candidate is in screening what does that mean",
+      "how long does onboarding take",
+      "what are the stages after proposal",
+    ],
+    response: {
+      action: "respond",
+      response_type: "mixed",
+      alert: null,
+      title: "Candidate Onboarding Stages",
+      intro:
+        "Once you propose a candidate, they move through up to six onboarding stages before they are cleared to start. Here is what each stage means and what to expect.",
+      steps: [
+        {
+          title: "In Screening",
+          body: "HWL or the facility is reviewing the submission documents you provided with the proposal.",
+        },
+        {
+          title: "Interview Scheduled",
+          body: "An interview has been arranged between the candidate and HWL or the facility team.",
+        },
+        {
+          title: "Pre-Agreement",
+          body: "A decision is pending on whether to move forward with a formal placement agreement.",
+        },
+        {
+          title: "Sign Agreements",
+          body: "The placement agreement is ready. Either the agency or facility — or both — need to sign. You will see a **Sign Agreement** button in the Action/Status column.",
+        },
+        {
+          title: "Credentialing",
+          body: "The facility is reviewing the candidate's compliance documents to confirm they meet all requirements.",
+        },
+        {
+          title: "Orientation Scheduled",
+          body: "The candidate has cleared all checks and is ready to begin their assignment. The Action/Status column will show **No Action**.",
+        },
+      ],
+      items: null,
+      options: null,
+      summary: null,
+      escalation: null,
+      chart: `flowchart TD
+  A[Candidate Proposed] --> B[In Screening]
+  B --> C[Interview Scheduled]
+  C --> D[Pre-Agreement]
+  D --> E[Sign Agreements]
+  E --> F[Credentialing]
+  F --> G[Orientation Scheduled]
+  G --> H[Ready to Start]`,
+      stages: null,
+      followUp:
+        "If your candidate has been stuck in the same stage for a while, contact your HWL Account Manager for an update.",
+      citations: [
+        {
+          chunk_id: "dd741cb7-35a8-4b5c-b649-685536919389",
+          source: "HWL Agency_HWL User Guide_ V4.pdf",
+        },
+      ],
+    },
+  },
+
+  /* ══════════════════════════════════════════════════════════════
+     REQUISITIONS — Subflow: Backup profile status
+     Component: answer — Alert + Steps
+  ══════════════════════════════════════════════════════════════ */
+  {
+    keywords: [
+      "what is backup profile status",
+      "backup profile",
+      "backup status",
+      "my candidate shows backup",
+      "candidate is in backup",
+      "what does backup mean on requisition",
+      "candidate stuck on backup profile",
+      "backup profile what do i do",
+    ],
+    response: {
+      action: "respond",
+      response_type: "answer",
+      alert: {
+        severity: "info",
+        title: "Backup does not mean rejected",
+        body: "Backup Profile status means your candidate is on standby for this requisition. They have not been turned down — the facility simply has not confirmed them yet.",
+      },
+      title: "My Candidate Shows Backup Profile — What Do I Do?",
+      intro:
+        "Backup Profile is a holding status. Here is what it means and the recommended steps to take.",
+      steps: [
+        {
+          title: "Do Not Withdraw Immediately",
+          body: "Backup status does not mean the candidate has been rejected. Avoid withdrawing them right away.",
+        },
+        {
+          title: "Wait 12 Hours",
+          body: "Give the facility at least 12 hours to review and act on the proposal before taking further steps.",
+        },
+        {
+          title: "Re-propose to Another Requisition",
+          body: "After 12 hours with no movement, re-propose the candidate to a different open requisition that fits their profile.",
+        },
+        {
+          title: "Submit to Another Facility Simultaneously",
+          body: "You can propose the same candidate to another facility at the same time — keeping the backup status on the original requisition does not block this.",
+        },
+      ],
+      items: null,
+      options: null,
+      summary: null,
+      escalation: null,
+      chart: null,
+      stages: null,
+      followUp:
+        "If the backup status persists beyond 24 hours with no update, reach out to your HWL Account Manager for visibility.",
+      citations: [
+        {
+          chunk_id: "dd741cb7-35a8-4b5c-b649-685536919389",
+          source: "HWL Agency_HWL User Guide_ V4.pdf",
+        },
+      ],
     },
   },
 ];
 
 /* ─────────────────────────────────────────────────────────────
    Simple lookup — first entry whose keyword appears wins.
-   Longer keywords sorted first per entry so specific phrases
-   match before short ones.
 ───────────────────────────────────────────────────────────────*/
 export function getDummyResponse(message: string): LLMResponse {
   const lower = message.toLowerCase();
@@ -1134,7 +1394,8 @@ export function getDummyResponse(message: string): LLMResponse {
     response_type: "notfound",
     alert: null,
     title: "No relevant documentation found",
-    intro: "I wasn't able to find anything matching your question.",
+    intro:
+      "I can help you troubleshoot — try rephrasing or asking something more specific. Here are a few examples of what I can help with:",
     steps: null,
     items: null,
     options: [
@@ -1155,9 +1416,7 @@ export function getDummyResponse(message: string): LLMResponse {
     escalation: null,
     chart: null,
     stages: null,
-    followUp: "Would any of these topics help?",
+    followUp: null,
     citations: [],
-    faqItems: null,
-    quotaMessage: null,
   };
 }

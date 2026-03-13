@@ -1,7 +1,3 @@
-/**
- * lib/jsonToMdx.ts
- */
-
 import type { LLMResponse } from "../types/llmResponse";
 
 function prop(value: unknown): string {
@@ -32,29 +28,19 @@ export function jsonToMdx(response: LLMResponse): string {
 
   const rt = response.response_type;
 
-  // ── faq ──────────────────────────────────────────────────────────────────
-  if (rt === "faq") {
-    if (response.faqItems?.length) {
-      parts.push(`<Faq\n  items={${JSON.stringify(response.faqItems)}}\n/>`);
-    }
-  }
-
-  // ── quota_exceeded ────────────────────────────────────────────────────────
-  if (rt === "quota_exceeded") {
-    const msgStr = response.quotaMessage
-      ? `\n  message=${prop(response.quotaMessage)}`
-      : "";
-    parts.push(`<QuotaExceeded${msgStr} />`);
-  }
-
-  // ── answer / clarify / options ────────────────────────────────────────────
-  if (rt === "answer" || rt === "clarify" || rt === "options") {
+  // ── answer ────────────────────────────────────────────────────────────
+  if (rt === "answer") {
     if (response.steps?.length) {
       const followUp = response.followUp
         ? `\n  followUp=${prop(response.followUp)}`
         : "";
       parts.push(
         `<Steps\n  steps={${JSON.stringify(response.steps)}}${followUp}\n/>`,
+      );
+    }
+    if (response.glossaryItems?.length) {
+      parts.push(
+        `<Glossary\n  items={${JSON.stringify(response.glossaryItems)}}\n/>`,
       );
     }
     if (response.items?.length) {
@@ -78,7 +64,16 @@ export function jsonToMdx(response: LLMResponse): string {
     }
   }
 
-  // ── mixed ─────────────────────────────────────────────────────────────────
+  // ── options ───────────────────────────────────────────────────────────
+  if (rt === "options") {
+    if (response.options?.length) {
+      parts.push(
+        `<Choices\n  question=${prop(response.title)}\n  options={${JSON.stringify(response.options)}}\n/>`,
+      );
+    }
+  }
+
+  // ── mixed ─────────────────────────────────────────────────────────────
   if (rt === "mixed") {
     if (response.chart) {
       const chart = response.chart.replace(/`/g, "\\`");
@@ -118,7 +113,11 @@ export function jsonToMdx(response: LLMResponse): string {
     }
   }
 
+  // ── notfound ──────────────────────────────────────────────────────────
   if (rt === "notfound") {
+    parts.push(
+      `<NotFound\n  title=${prop(response.title)}\n  message=${prop(response.intro ?? "I can help you troubleshoot — try rephrasing or asking something more specific. Here are a few examples of what I can help with:")}\n/>`,
+    );
     if (response.options?.length) {
       parts.push(
         `<Choices\n  question=${prop(response.title)}\n  options={${JSON.stringify(response.options)}}\n/>`,
@@ -126,7 +125,7 @@ export function jsonToMdx(response: LLMResponse): string {
     }
   }
 
-  // Escalation always last (if present)
+  // Escalation always last
   if (response.escalation) {
     const { title, message, reason } = response.escalation;
     const reasonStr = reason ? `\n  reason=${prop(reason)}` : "";

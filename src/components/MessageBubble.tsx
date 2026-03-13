@@ -6,8 +6,6 @@ import { useMDX } from '../hooks/useMDX'
 import { mdxComponents } from '../lib/mdxComponents'
 import { Citations } from './Citations'
 
-import type { Citation } from '../types'
-
 interface Props {
   message: Message
   primaryColor: string
@@ -18,57 +16,11 @@ function formatTime(date: Date): string {
   return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
 }
 
-interface ParsedContent {
-  mdxBody: string | null
-  citations: Citation[]
-}
-
-/**
- * Parses message.content and extracts mdxBody + citations.
- *
- * Shape 1: dummy.ts  — [{ type: "mdx", data: { body: "..." } }]
- * Shape 2: backend   — { response: "<MDX or markdown string>", citations: [...] }
- * Shape 3: raw string — plain markdown or MDX passed directly
- */
-function parseContent(content: string): ParsedContent {
-  try {
-    const parsed = JSON.parse(content)
-
-    // Shape 1: dummy.ts array wrapper
-    const arr = Array.isArray(parsed)
-      ? parsed
-      : Array.isArray(parsed?.response)
-        ? parsed.response
-        : null
-
-    if (arr && arr.length > 0 && arr[0]?.type === 'mdx' && typeof arr[0]?.data?.body === 'string') {
-      return { mdxBody: arr[0].data.body as string, citations: [] }
-    }
-
-    // Shape 2: real backend { response: "...", citations: [...] }
-    // Return regardless of whether it contains MDX tags — MDX is a superset
-    // of markdown so plain markdown responses render fine through useMDX.
-    if (typeof parsed?.response === 'string') {
-      return {
-        mdxBody: parsed.response.trim(),
-        citations: Array.isArray(parsed.citations) ? parsed.citations : [],
-      }
-    }
-
-  } catch {
-    // not JSON — fall through
-  }
-
-  // Shape 3: raw string — plain markdown or MDX passed directly
-  return { mdxBody: content.trim(), citations: [] }
-}
-
 export function MessageBubble({ message, primaryColor, onQuickReply }: Props) {
   const isUser = message.role === 'user'
 
-  const { mdxBody, citations } = isUser
-    ? { mdxBody: null, citations: [] }
-    : parseContent(message.content)
+  const mdxBody = isUser ? null : message.content
+  const citations = isUser ? [] : (message.citations ?? [])
 
   const { Content: MDXContent, error: mdxError } = useMDX(mdxBody ?? '')
 
@@ -99,7 +51,6 @@ export function MessageBubble({ message, primaryColor, onQuickReply }: Props) {
     }
 
     if (mdxBody !== null) {
-      // MDX evaluation failed — fall back to ReactMarkdown
       if (mdxError) {
         return (
           <ReactMarkdown remarkPlugins={[remarkGfm]} components={markdownComponents}>
@@ -108,7 +59,6 @@ export function MessageBubble({ message, primaryColor, onQuickReply }: Props) {
         )
       }
 
-      // Still compiling
       if (!MDXContent) {
         return <p className="text-xs text-gray-400 animate-pulse">Rendering…</p>
       }
@@ -126,7 +76,6 @@ export function MessageBubble({ message, primaryColor, onQuickReply }: Props) {
       return <MDX components={components} />
     }
 
-    // Fallback — should rarely be hit now
     return (
       <ReactMarkdown remarkPlugins={[remarkGfm]} components={markdownComponents}>
         {message.content}
@@ -145,7 +94,6 @@ export function MessageBubble({ message, primaryColor, onQuickReply }: Props) {
       >
         {renderContent()}
 
-        {/* Citations rendered below MDX content — assistant only */}
         {!isUser && <Citations citations={citations} />}
 
         {message.attachment && (

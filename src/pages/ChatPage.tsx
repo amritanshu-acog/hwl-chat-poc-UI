@@ -1,9 +1,3 @@
-/**
- * ChatPage.tsx
- * ------------
- * Full-page standalone chat — pure Tailwind, zero custom CSS classes.
- */
-
 import { useState, useCallback, useRef } from "react";
 import type { Message } from "../types";
 import { useSession } from "../hooks/useSession";
@@ -20,15 +14,11 @@ interface ChatPageProps {
 }
 
 export function ChatPage({ token, userId }: ChatPageProps) {
-    const { primaryColor, title, subtitle, placeholder } = APP_CONFIG;
+    const { primaryColor, title, placeholder } = APP_CONFIG;
 
     const [isLoading, setIsLoading] = useState(false);
     const [inputValue, setInputValue] = useState("");
     const [attachment, setAttachment] = useState<File | null>(null);
-
-    // Tracks the real backend session ID returned after the first message.
-    // Undefined on a fresh session — omitted from the first request so the
-    // backend creates a new session and returns its ID.
     const [activeSessionId, setActiveSessionId] = useState<string | undefined>(undefined);
 
     const {
@@ -43,9 +33,6 @@ export function ChatPage({ token, userId }: ChatPageProps) {
 
     const { messages, addMessage } = useMessages(sessionId);
 
-    // ✅ FIX: Use a ref to track whether this is the first message of a session
-    // so we don't rely on messages.length (which is 0 on first render even for
-    // resumed sessions due to the async useEffect in useMessages).
     const hasPreviewRef = useRef<Record<string, boolean>>({});
 
     const send = useCallback(
@@ -63,8 +50,6 @@ export function ChatPage({ token, userId }: ChatPageProps) {
             };
             addMessage(userMsg);
 
-            // ✅ FIX: track first-message-per-session via a ref, not messages.length,
-            // to avoid false positives when messages haven't loaded from storage yet.
             if (!hasPreviewRef.current[sessionId]) {
                 hasPreviewRef.current[sessionId] = true;
                 updateSessionPreview(sessionId, text);
@@ -76,14 +61,11 @@ export function ChatPage({ token, userId }: ChatPageProps) {
             setIsLoading(true);
 
             try {
-                // In production: first message has no session_id — backend creates one.
-                // Subsequent messages use the backend session_id returned from the first response.
-                // In demo mode: use the local sessionId as before.
                 const backendSessionId = APP_CONFIG.demoMode
                     ? sessionId
                     : activeSessionId;
 
-                const raw = await sendMessage(
+                const { body, citations } = await sendMessage(
                     text,
                     backendSessionId ?? "",
                     token,
@@ -93,14 +75,14 @@ export function ChatPage({ token, userId }: ChatPageProps) {
                 addMessage({
                     id: crypto.randomUUID(),
                     role: "assistant",
-                    content: raw,
+                    content: body,
+                    citations,
                     timestamp: new Date(),
                 });
 
-                // Sync the backend session_id back so subsequent turns resume correctly.
                 if (!APP_CONFIG.demoMode) {
                     try {
-                        const parsed = JSON.parse(raw);
+                        const parsed = JSON.parse(body);
                         if (parsed?.session_id) {
                             setActiveSessionId(parsed.session_id);
                             if (parsed.session_id !== sessionId) {
@@ -114,6 +96,7 @@ export function ChatPage({ token, userId }: ChatPageProps) {
                     id: crypto.randomUUID(),
                     role: "assistant",
                     content: '<Alert severity="danger" title="Connection error" body="Sorry, I couldn\'t connect to the server. Please try again." />',
+                    citations: [],
                     timestamp: new Date(),
                 });
             } finally {
@@ -135,22 +118,15 @@ export function ChatPage({ token, userId }: ChatPageProps) {
     );
 
     const handleNewChat = useCallback(() => {
-        // ✅ FIX: call startNewSession() FIRST to get the new ID, THEN reset state.
-        // Previously clearMessages() was called first with the old sessionId — that
-        // part is fine — but the ordering caused useMessages' useEffect to run and
-        // wipe in-flight state. Now we let useMessages naturally load an empty array
-        // for the brand-new sessionId (nothing in storage yet), so no explicit clear needed.
         const newId = startNewSession();
-        setActiveSessionId(undefined); // reset so backend creates a fresh session
-        // Mark the new session as having no preview yet
+        setActiveSessionId(undefined);
         delete hasPreviewRef.current[newId];
     }, [startNewSession]);
 
     const handleSwitchSession = useCallback(
         (id: string) => {
             switchSession(id);
-            setActiveSessionId(id); // resume the existing backend session
-            // Mark as already having a preview so we don't overwrite it
+            setActiveSessionId(id);
             hasPreviewRef.current[id] = true;
         },
         [switchSession]
@@ -162,23 +138,22 @@ export function ChatPage({ token, userId }: ChatPageProps) {
         <div className="flex h-screen w-screen overflow-hidden bg-slate-100 font-sans">
 
             {/* ════════════════════════════════════
-                SIDEBAR
-            ════════════════════════════════════ */}
+          SIDEBAR
+      ════════════════════════════════════ */}
             <Sidebar
                 sessionId={sessionId}
                 sessions={sessions}
                 displayName={displayName}
                 primaryColor={primaryColor}
                 title={title}
-                subtitle={subtitle}
                 onNewChat={handleNewChat}
                 onSwitchSession={handleSwitchSession}
                 onDeleteSession={deleteSession}
             />
 
             {/* ════════════════════════════════════
-                MAIN CHAT COLUMN
-            ════════════════════════════════════ */}
+          MAIN CHAT COLUMN
+      ════════════════════════════════════ */}
             <main className="flex flex-1 flex-col min-w-0 bg-slate-50">
 
                 {/* Top header */}

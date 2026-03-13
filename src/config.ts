@@ -32,8 +32,8 @@ export const APP_CONFIG = {
   // ── Chat defaults ─────────────────────────────────────
   placeholder: "Ask me anything…",
   quickReplies: [
-    { icon: "people", text: "How do I propose a candidate?" },
-    { icon: "doc", text: "What are the Onboarding Stages?" },
-    { icon: "clock", text: "How do I add Expense?" },
+    { icon: "people", text: "Where do I find requisitions?" },
+    { icon: "doc", text: "Help me in initial setup for HWL" },
+    { icon: "clock", text: "Explain timecard lifecycle" },
   ],
 } as const;
