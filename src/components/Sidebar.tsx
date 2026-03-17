@@ -2,7 +2,7 @@ import { useState, useRef, useEffect } from "react";
 import type { Session } from "../types";
 import {
     MenuIcon, PlusIcon, ChatIcon, DotsIcon, TrashIcon,
-    ChevronIcon, ProfileIcon, SettingsIcon, HelpIcon, SignOutIcon,
+    ChevronIcon, ProfileIcon, SettingsIcon, HelpIcon,
 } from "../assets/icons";
 
 interface SidebarProps {
@@ -14,14 +14,20 @@ interface SidebarProps {
     onNewChat: () => void;
     onSwitchSession: (id: string) => void;
     onDeleteSession: (id: string) => void;
-    onSignOut?: () => void;
 }
 
 type SessionMenu = { id: string; action: "options" | "confirm-delete" };
 
+interface UserMenuItem {
+    label: string;
+    icon: React.ReactNode;
+    onClick?: () => void;
+    danger: boolean;
+}
+
 export function Sidebar({
     sessionId, sessions, displayName, primaryColor, title,
-    onNewChat, onSwitchSession, onDeleteSession, onSignOut,
+    onNewChat, onSwitchSession, onDeleteSession,
 }: SidebarProps) {
     const [collapsed, setCollapsed] = useState(false);
     const [userMenuOpen, setUserMenuOpen] = useState(false);
@@ -52,12 +58,10 @@ export function Sidebar({
         if (collapsed) { setSessionMenu(null); setUserMenuOpen(false); }
     }, [collapsed]);
 
-    const userMenuItems = [
+    const userMenuItems: UserMenuItem[] = [
         { label: "Profile", icon: <ProfileIcon />, onClick: undefined, danger: false },
         { label: "Settings", icon: <SettingsIcon />, onClick: undefined, danger: false },
         { label: "Help", icon: <HelpIcon />, onClick: undefined, danger: false },
-        { divider: true },
-        { label: "Sign Out", icon: <SignOutIcon />, onClick: onSignOut, danger: true },
     ];
 
     return (
@@ -174,17 +178,16 @@ export function Sidebar({
                             <p className="text-[10px] text-slate-400 mt-0.5">Manage your account</p>
                         </div>
                         <div className="py-1">
-                            {userMenuItems.map((item, i) =>
-                                "divider" in item
-                                    ? <div key={i} className="my-1 border-t border-slate-100" />
-                                    : (
-                                        <button key={i} onClick={() => { item.onClick?.(); setUserMenuOpen(false); }}
-                                            className={`flex w-full items-center gap-2.5 px-3 py-1.5 text-xs hover:bg-slate-50 transition-colors ${item.danger ? "text-red-500 hover:bg-red-50" : "text-slate-600"}`}>
-                                            <span className={item.danger ? "text-red-400" : "text-slate-400"}>{item.icon}</span>
-                                            {item.label}
-                                        </button>
-                                    )
-                            )}
+                            {userMenuItems.map((item, i) => (
+                                <button
+                                    key={i}
+                                    onClick={() => { item.onClick?.(); setUserMenuOpen(false); }}
+                                    className={`flex w-full items-center gap-2.5 px-3 py-1.5 text-xs hover:bg-slate-50 transition-colors ${item.danger ? "text-red-500 hover:bg-red-50" : "text-slate-600"}`}
+                                >
+                                    <span className={item.danger ? "text-red-400" : "text-slate-400"}>{item.icon}</span>
+                                    {item.label}
+                                </button>
+                            ))}
                         </div>
                     </div>
                 )}
