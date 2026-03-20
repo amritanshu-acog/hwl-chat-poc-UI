@@ -11,7 +11,7 @@ function makeKey(items: string[]) {
     return `checklist-${hash}`
 }
 
-export function Checklist({ title, items, primaryColor = '#0052CC' }: Props) {
+export function Checklist({ items, primaryColor = '#0052CC' }: Props) {
     const storageKey = makeKey(items)
 
     const [checked, setChecked] = useState<Record<number, boolean>>(() => {

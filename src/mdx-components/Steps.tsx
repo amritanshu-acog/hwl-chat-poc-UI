@@ -19,7 +19,6 @@ export function Steps({
     title,
     intro,
     steps,
-    followUp,
     primaryColor = "#0052CC",
 }: Props) {
     return (
