@@ -1,0 +1,26 @@
+version: "3.9"
+
+services:
+  helpbot-frontend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        # Passed from the server-side .env file via --env-file flag.
+        # This bakes the demo token into the bundle so the app works standalone.
+        # When the host app is ready, remove this arg — URL ?token= flow takes over.
+        VITE_DEV_TOKEN: ${VITE_DEV_TOKEN}
+    container_name: helpbot-frontend
+
+    labels:
+      - "user=${USER}"
+      - "description=AI Helpbot Frontend (HWL Chat UI)"
+
+    networks:
+      - ai-helpbot-network
+
+    restart: unless-stopped
+
+networks:
+  ai-helpbot-network:
+    external: true
