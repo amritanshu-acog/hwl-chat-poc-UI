@@ -41,6 +41,11 @@ export function useMessages(token: string, onUnauthorized: () => void) {
     setMessages((prev) => [...prev, message]);
   }, []);
 
+  /** Roll back an optimistic message (e.g. on API failure). */
+  const removeMessage = useCallback((id: string) => {
+    setMessages((prev) => prev.filter((m) => m.id !== id));
+  }, []);
+
   const clearMessages = useCallback(() => {
     setMessages([]);
   }, []);
@@ -76,8 +81,11 @@ export function useMessages(token: string, onUnauthorized: () => void) {
       } catch (err) {
         if (err instanceof UnauthorizedError) {
           onUnauthorized();
+        } else {
+          // Re-throw so callers (ChatPage) can show a toast.
+          setMessages([]);
+          throw err;
         }
-        setMessages([]);
       } finally {
         setHistoryLoading(false);
       }
@@ -89,6 +97,7 @@ export function useMessages(token: string, onUnauthorized: () => void) {
     messages,
     historyLoading,
     addMessage,
+    removeMessage,
     clearMessages,
     loadSessionHistory,
     updateMessageSelection,

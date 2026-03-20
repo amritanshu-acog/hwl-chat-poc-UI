@@ -18,7 +18,7 @@
  *  production — it will never be bundled unless explicitly defined.
  */
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { APP_CONFIG } from "../config";
 import { decodeJWT, isTokenValid } from "../utils/jwt";
 import type { JWTPayload } from "../utils/jwt";
@@ -30,8 +30,27 @@ export type AuthState =
   | { status: "authenticated"; token: string; payload: JWTPayload }
   | { status: "unauthenticated"; reason: string };
 
-export function useAuth(): AuthState {
+export type AuthResult = AuthState & { logout: () => void };
+
+export function useAuth(): AuthResult {
   const [authState, setAuthState] = useState<AuthState>({ status: "loading" });
+
+  const logout = useCallback(() => {
+    sessionStorage.removeItem(APP_CONFIG.jwtStorageKey);
+    const params = new URLSearchParams(window.location.search);
+    if (params.has(APP_CONFIG.jwtParamName)) {
+      params.delete(APP_CONFIG.jwtParamName);
+      const cleanUrl =
+        window.location.pathname +
+        (params.toString() ? `?${params}` : "") +
+        window.location.hash;
+      window.history.replaceState({}, "", cleanUrl);
+    }
+    setAuthState({
+      status: "unauthenticated",
+      reason: "Your session has expired or the server rejected your token.",
+    });
+  }, []);
 
   useEffect(() => {
     // 1. Check URL param — host app redirects with ?token=...
@@ -101,5 +120,5 @@ export function useAuth(): AuthState {
     });
   }, []);
 
-  return authState;
+  return { ...authState, logout };
 }

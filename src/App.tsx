@@ -38,14 +38,9 @@ function UnauthScreen({ reason }: { reason: string }) {
 export default function App() {
   const auth = useAuth();
 
-  /**
-   * Called by ChatPage when the backend returns 401 (token expired mid-session).
-   * Clears the stored token so the next load triggers the host app auth flow.
-   */
   const handleUnauthorized = useCallback(() => {
-    sessionStorage.removeItem(APP_CONFIG.jwtStorageKey);
-    window.location.reload();
-  }, []);
+    auth.logout();
+  }, [auth.logout]);
 
   if (auth.status === "loading") return <LoadingScreen />;
 

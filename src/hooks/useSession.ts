@@ -20,6 +20,7 @@ import { UnauthorizedError } from "../services/errors";
 export function useSession(token: string, onUnauthorized: () => void) {
   const [sessions, setSessions] = useState<SessionListItem[]>([]);
   const [sessionsLoading, setSessionsLoading] = useState(true);
+  const [sessionsError, setSessionsError] = useState<Error | null>(null);
 
   /**
    * The server-assigned session ID for the current conversation.
@@ -27,22 +28,27 @@ export function useSession(token: string, onUnauthorized: () => void) {
    */
   const [activeSessionId, setActiveSessionId] = useState<string | null>(null);
 
-  /** Pull the latest session list from the server. */
   const refreshSessions = useCallback(async () => {
+    setSessionsError(null);
+    setSessionsLoading(true);
     try {
       const list = await fetchSessions(token);
       setSessions(list); // server already sorts by recency
     } catch (err) {
       if (err instanceof UnauthorizedError) {
         onUnauthorized();
+      } else if (err instanceof Error) {
+        // Record the error so the UI can show a connection error screen.
+        setSessionsError(err);
       }
-      // Other errors: silently retain the existing list
+    } finally {
+      setSessionsLoading(false);
     }
   }, [token, onUnauthorized]);
 
   // Load session list on mount
   useEffect(() => {
-    refreshSessions().finally(() => setSessionsLoading(false));
+    refreshSessions();
   }, [refreshSessions]);
 
   /** Start a new blank chat — clears the active session ID. */
@@ -66,6 +72,7 @@ export function useSession(token: string, onUnauthorized: () => void) {
   return {
     sessions,
     sessionsLoading,
+    sessionsError,
     activeSessionId,
     setActiveSessionId,
     startNewSession,

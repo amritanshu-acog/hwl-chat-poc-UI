@@ -126,7 +126,7 @@ export function Sidebar({
                                     : {}
                             }
                         >
-                            <ChatIcon color={isActive ? primaryColor : "#94a3b8"} />
+                            <ChatIcon size={14} color={isActive ? primaryColor : "#94a3b8"} />
                             {!collapsed && (
                                 <div className="flex-1 min-w-0">
                                     <p className="truncate text-xs font-medium text-slate-700 leading-snug">
