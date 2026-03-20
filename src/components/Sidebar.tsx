@@ -1,22 +1,21 @@
 import { useState, useRef, useEffect } from "react";
-import type { Session } from "../types";
+import type { SessionListItem } from "../types";
 import {
-    MenuIcon, PlusIcon, ChatIcon, DotsIcon, TrashIcon,
+    MenuIcon, PlusIcon, ChatIcon,
     ChevronIcon, ProfileIcon, SettingsIcon, HelpIcon,
 } from "../assets/icons";
 
 interface SidebarProps {
-    sessionId: string;
-    sessions: Session[];
+    activeSessionId: string | null;
+    sessions: SessionListItem[];
+    sessionsLoading: boolean;
     displayName: string;
     primaryColor: string;
     title: string;
+    isLoading: boolean;
     onNewChat: () => void;
-    onSwitchSession: (id: string) => void;
-    onDeleteSession: (id: string) => void;
+    onSwitchSession: (sessionId: string) => void;
 }
-
-type SessionMenu = { id: string; action: "options" | "confirm-delete" };
 
 interface UserMenuItem {
     label: string;
@@ -25,16 +24,26 @@ interface UserMenuItem {
     danger: boolean;
 }
 
+function formatDate(iso: string): string {
+    const d = new Date(iso);
+    const now = new Date();
+    const diffDays = Math.floor(
+        (now.getTime() - d.getTime()) / (1000 * 60 * 60 * 24),
+    );
+    if (diffDays === 0) return "Today";
+    if (diffDays === 1) return "Yesterday";
+    if (diffDays < 7) return `${diffDays}d ago`;
+    return d.toLocaleDateString([], { month: "short", day: "numeric" });
+}
+
 export function Sidebar({
-    sessionId, sessions, displayName, primaryColor, title,
-    onNewChat, onSwitchSession, onDeleteSession,
+    activeSessionId, sessions, sessionsLoading, displayName, primaryColor,
+    title: _title, isLoading, onNewChat, onSwitchSession,
 }: SidebarProps) {
     const [collapsed, setCollapsed] = useState(false);
     const [userMenuOpen, setUserMenuOpen] = useState(false);
-    const [sessionMenu, setSessionMenu] = useState<SessionMenu | null>(null);
 
     const userMenuRef = useRef<HTMLDivElement>(null);
-    const sessionMenuRef = useRef<HTMLDivElement>(null);
 
     useEffect(() => {
         const handler = (e: MouseEvent) => {
@@ -46,16 +55,7 @@ export function Sidebar({
     }, []);
 
     useEffect(() => {
-        const handler = (e: MouseEvent) => {
-            if (sessionMenuRef.current && !sessionMenuRef.current.contains(e.target as Node))
-                if (sessionMenu?.action === "options") setSessionMenu(null);
-        };
-        document.addEventListener("mousedown", handler);
-        return () => document.removeEventListener("mousedown", handler);
-    }, [sessionMenu]);
-
-    useEffect(() => {
-        if (collapsed) { setSessionMenu(null); setUserMenuOpen(false); }
+        if (collapsed) setUserMenuOpen(false);
     }, [collapsed]);
 
     const userMenuItems: UserMenuItem[] = [
@@ -86,62 +86,60 @@ export function Sidebar({
                 )}
             </div>
 
-            {/* Sessions */}
+            {/* Session list */}
             <div className="flex-1 overflow-y-auto overflow-x-hidden px-2 py-1 space-y-0.5 [&::-webkit-scrollbar]:w-1 [&::-webkit-scrollbar-thumb]:bg-slate-200 [&::-webkit-scrollbar-thumb]:rounded-full">
-                {!collapsed && sessions.length === 0 && (
-                    <p className="px-3 py-4 text-center text-xs text-slate-400">No conversations yet</p>
+
+                {sessionsLoading && !collapsed && (
+                    <div className="space-y-1 px-1 py-2">
+                        {[1, 2, 3].map(i => (
+                            <div key={i} className="h-8 rounded-lg bg-slate-100 animate-pulse" />
+                        ))}
+                    </div>
                 )}
 
-                {sessions.slice().reverse().map((s: Session) => {
-                    const isActive = s.sessionId === sessionId;
-                    const menu = sessionMenu?.id === s.sessionId ? sessionMenu : null;
+                {!sessionsLoading && !collapsed && sessions.length === 0 && (
+                    <p className="px-3 py-6 text-center text-xs text-slate-400">
+                        No conversations yet
+                    </p>
+                )}
+
+                {sessions.map((s: SessionListItem) => {
+                    const isActive = s.session_id === activeSessionId;
+                    const isDisabled = isLoading;
 
                     return (
-                        <div key={s.sessionId}>
-                            <div
-                                onClick={() => onSwitchSession(s.sessionId)}
-                                title={collapsed ? (s.preview || "Untitled") : undefined}
-                                className={`group flex w-full items-center gap-2 rounded-lg border px-2 py-1.5 cursor-pointer transition-all ${isActive ? "border-slate-200" : "border-transparent hover:bg-slate-50"}`}
-                                style={isActive ? { backgroundColor: `${primaryColor}12`, borderColor: `${primaryColor}30` } : {}}
-                            >
-                                <ChatIcon color={isActive ? primaryColor : "#94a3b8"} />
-                                {!collapsed && (
-                                    <>
-                                        <span className="flex-1 truncate text-xs text-slate-600">{s.preview || "Untitled"}</span>
-                                        <button
-                                            onClick={e => { e.stopPropagation(); setSessionMenu(prev => prev?.id === s.sessionId ? null : { id: s.sessionId, action: "options" }); }}
-                                            className="hidden group-hover:flex h-5 w-5 items-center justify-center rounded text-slate-400 hover:bg-slate-200 transition-colors"
-                                        >
-                                            <DotsIcon />
-                                        </button>
-                                    </>
-                                )}
-                            </div>
-
-                            {/* Options menu */}
-                            {!collapsed && menu?.action === "options" && (
-                                <div ref={sessionMenuRef} className="mx-1 mb-1 rounded-lg border border-slate-100 bg-white shadow-md overflow-hidden z-10">
-                                    <button
-                                        onClick={() => setSessionMenu({ id: s.sessionId, action: "confirm-delete" })}
-                                        className="flex w-full items-center gap-2.5 px-3 py-2 text-xs text-red-500 hover:bg-slate-50 transition-colors"
-                                    >
-                                        <TrashIcon />
-                                        Delete
-                                    </button>
+                        <button
+                            key={s.session_id}
+                            onClick={() => !isDisabled && onSwitchSession(s.session_id)}
+                            title={collapsed ? (s.title || "Untitled") : undefined}
+                            disabled={isDisabled}
+                            className={`group flex w-full items-center gap-2 rounded-lg border px-2 py-2 text-left transition-all
+                                ${isDisabled
+                                    ? 'cursor-not-allowed opacity-40'
+                                    : isActive
+                                        ? 'cursor-default border-slate-200'
+                                        : 'cursor-pointer border-transparent hover:bg-slate-50'
+                                }`}
+                            style={
+                                isActive
+                                    ? { backgroundColor: `${primaryColor}12`, borderColor: `${primaryColor}30` }
+                                    : {}
+                            }
+                        >
+                            <ChatIcon color={isActive ? primaryColor : "#94a3b8"} />
+                            {!collapsed && (
+                                <div className="flex-1 min-w-0">
+                                    <p className="truncate text-xs font-medium text-slate-700 leading-snug">
+                                        {s.title || "Untitled"}
+                                    </p>
+                                    <p className="text-[10px] text-slate-400 mt-0.5 flex items-center gap-1.5">
+                                        <span>{formatDate(s.updated_at)}</span>
+                                        <span>·</span>
+                                        <span>{s.turn_count} {s.turn_count === 1 ? "turn" : "turns"}</span>
+                                    </p>
                                 </div>
                             )}
-
-                            {/* Delete confirm */}
-                            {!collapsed && menu?.action === "confirm-delete" && (
-                                <div className="mx-1 mb-1 rounded-lg border border-red-100 bg-red-50 px-2.5 py-2">
-                                    <p className="text-[11px] text-red-600 font-medium mb-1.5">Delete this conversation?</p>
-                                    <div className="flex gap-1.5">
-                                        <button onClick={() => { onDeleteSession(s.sessionId); setSessionMenu(null); }} className="flex-1 rounded-md bg-red-500 px-2 py-1 text-[11px] font-medium text-white hover:bg-red-600 transition-colors">Delete</button>
-                                        <button onClick={() => setSessionMenu(null)} className="flex-1 rounded-md border border-slate-200 bg-white px-2 py-1 text-[11px] text-slate-500 hover:bg-slate-50 transition-colors">Cancel</button>
-                                    </div>
-                                </div>
-                            )}
-                        </div>
+                        </button>
                     );
                 })}
             </div>
@@ -151,8 +149,9 @@ export function Sidebar({
                 {collapsed ? (
                     <button
                         onClick={onNewChat}
+                        disabled={isLoading}
                         title="New Chat"
-                        className="flex h-9 w-9 items-center justify-center rounded-xl text-white transition-all hover:opacity-90 active:scale-95"
+                        className="flex h-9 w-9 items-center justify-center rounded-xl text-white transition-all hover:opacity-90 active:scale-95 disabled:opacity-40 disabled:cursor-not-allowed"
                         style={{ backgroundColor: primaryColor }}
                     >
                         <PlusIcon className="w-4 h-4" />
@@ -160,7 +159,8 @@ export function Sidebar({
                 ) : (
                     <button
                         onClick={onNewChat}
-                        className="flex w-full items-center justify-center gap-2 rounded-xl py-2.5 text-sm font-semibold text-white transition-all hover:opacity-90 active:scale-95"
+                        disabled={isLoading}
+                        className="flex w-full items-center justify-center gap-2 rounded-xl py-2.5 text-sm font-semibold text-white transition-all hover:opacity-90 active:scale-95 disabled:opacity-40 disabled:cursor-not-allowed"
                         style={{ backgroundColor: primaryColor }}
                     >
                         <PlusIcon className="w-4 h-4" />
@@ -196,8 +196,10 @@ export function Sidebar({
                     title={collapsed ? displayName : undefined}
                     className="flex w-full items-center gap-2.5 px-3 py-3 hover:bg-slate-50 transition-colors"
                 >
-                    <div className="flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-full text-[11px] font-bold"
-                        style={{ backgroundColor: `${primaryColor}20`, color: primaryColor }}>
+                    <div
+                        className="flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-full text-[11px] font-bold"
+                        style={{ backgroundColor: `${primaryColor}20`, color: primaryColor }}
+                    >
                         {displayName.charAt(0).toUpperCase()}
                     </div>
                     {!collapsed && (

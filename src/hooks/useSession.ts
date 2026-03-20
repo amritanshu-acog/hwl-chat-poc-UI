@@ -1,158 +1,75 @@
 /**
  * useSession.ts
  * -------------
- * Manages session IDs and the sidebar session list.
+ * Manages the session list and the current active session ID.
  *
- * Session ID ownership:
- *   demoMode=true  → client generates IDs (crypto.randomUUID)
- *   demoMode=false → server returns session_id on first message;
- *                    call confirmSessionId() to sync it back here
+ * The server is the single source of truth:
+ *   - Session list comes from GET /sessions (loaded on mount, refreshed after each turn)
+ *   - No localStorage — nothing is persisted client-side
+ *
+ * activeSessionId:
+ *   null          → new chat, no server session exists yet
+ *   string (uuid) → server-assigned session ID for the current conversation
  */
 
-import { useState, useCallback } from "react";
-import type { Session } from "../types";
-import { APP_CONFIG } from "../config";
+import { useState, useEffect, useCallback } from "react";
+import type { SessionListItem } from "../types";
+import { fetchSessions } from "../services/api";
+import { UnauthorizedError } from "../services/errors";
 
-const CURRENT_KEY = "hwl_session_current";
-const INDEX_KEY = "hwl_sessions_index";
-const MAX_SESSIONS = 20;
+export function useSession(token: string, onUnauthorized: () => void) {
+  const [sessions, setSessions] = useState<SessionListItem[]>([]);
+  const [sessionsLoading, setSessionsLoading] = useState(true);
 
-function loadIndex(): Session[] {
-  try {
-    const raw = localStorage.getItem(INDEX_KEY);
-    if (!raw) return [];
-    const parsed = JSON.parse(raw) as Array<
-      Omit<Session, "startedAt" | "messages"> & { startedAt: string }
-    >;
-    return parsed.map((s) => ({
-      ...s,
-      startedAt: new Date(s.startedAt),
-      messages: [],
-    }));
-  } catch {
-    return [];
-  }
-}
+  /**
+   * The server-assigned session ID for the current conversation.
+   * null = new chat that the server hasn't seen yet.
+   */
+  const [activeSessionId, setActiveSessionId] = useState<string | null>(null);
 
-function saveIndex(sessions: Session[]): void {
-  localStorage.setItem(
-    INDEX_KEY,
-    JSON.stringify(sessions.slice(-MAX_SESSIONS)),
-  );
-}
+  /** Pull the latest session list from the server. */
+  const refreshSessions = useCallback(async () => {
+    try {
+      const list = await fetchSessions(token);
+      setSessions(list); // server already sorts by recency
+    } catch (err) {
+      if (err instanceof UnauthorizedError) {
+        onUnauthorized();
+      }
+      // Other errors: silently retain the existing list
+    }
+  }, [token, onUnauthorized]);
 
-function getOrCreateSession(): string {
-  const existing = localStorage.getItem(CURRENT_KEY);
-  if (existing) return existing;
-  const id = crypto.randomUUID();
-  localStorage.setItem(CURRENT_KEY, id);
-  return id;
-}
+  // Load session list on mount
+  useEffect(() => {
+    refreshSessions().finally(() => setSessionsLoading(false));
+  }, [refreshSessions]);
 
-export function useSession() {
-  const [sessionId, setSessionId] = useState<string>(getOrCreateSession);
-  const [sessions, setSessions] = useState<Session[]>(loadIndex);
-
+  /** Start a new blank chat — clears the active session ID. */
   const startNewSession = useCallback(() => {
-    // In production the real session_id comes back from the server on
-    // the first message. We use a temporary client UUID until then.
-    const id = crypto.randomUUID();
-    localStorage.setItem(CURRENT_KEY, id);
-    setSessionId(id);
-    return id;
+    setActiveSessionId(null);
   }, []);
 
   /**
-   * Called by ChatPage after the first API response in a new session.
-   * Replaces the temporary client UUID with the server-assigned session_id.
-   * Only used in production mode — demo mode keeps client-generated IDs.
+   * Called after the first POST /answer response in a new session.
+   * Records the server-assigned ID and refreshes the session list so
+   * the new session appears in the sidebar.
    */
-  const confirmSessionId = useCallback((tempId: string, serverId: string) => {
-    if (APP_CONFIG.demoMode) return;
-    if (tempId === serverId) return;
-
-    // Migrate localStorage keys
-    const messages = localStorage.getItem(`hwl_session_${tempId}`);
-    if (messages) {
-      localStorage.setItem(`hwl_session_${serverId}`, messages);
-      localStorage.removeItem(`hwl_session_${tempId}`);
-    }
-
-    localStorage.setItem(CURRENT_KEY, serverId);
-    setSessionId(serverId);
-
-    setSessions((prev) => {
-      const updated = prev.map((s) =>
-        s.sessionId === tempId ? { ...s, sessionId: serverId } : s,
-      );
-      saveIndex(updated);
-      return updated;
-    });
-  }, []);
-
-  const switchSession = useCallback((id: string) => {
-    localStorage.setItem(CURRENT_KEY, id);
-    setSessionId(id);
-  }, []);
-
-  const updateSessionPreview = useCallback((id: string, preview: string) => {
-    setSessions((prev) => {
-      const exists = prev.find((s) => s.sessionId === id);
-      let updated: Session[];
-      if (exists) {
-        updated = prev.map((s) => (s.sessionId === id ? { ...s, preview } : s));
-      } else {
-        const newSession: Session = {
-          sessionId: id,
-          startedAt: new Date(),
-          preview,
-          messages: [],
-        };
-        updated = [...prev, newSession];
-      }
-      saveIndex(updated);
-      return updated;
-    });
-  }, []);
-
-  const deleteSession = useCallback(
-    (id: string) => {
-      // ✅ FIX: use `updated` derived from React state instead of re-reading
-      // localStorage via loadIndex(), which could be stale.
-      setSessions((prev) => {
-        const updated = prev.filter((s) => s.sessionId !== id);
-        saveIndex(updated);
-
-        if (id === sessionId) {
-          if (updated.length > 0) {
-            // Switch to the most recent remaining session
-            const nextId = updated[updated.length - 1].sessionId;
-            localStorage.setItem(CURRENT_KEY, nextId);
-            setSessionId(nextId);
-          } else {
-            // No sessions left — create a fresh one
-            localStorage.removeItem(CURRENT_KEY);
-            const newId = crypto.randomUUID();
-            localStorage.setItem(CURRENT_KEY, newId);
-            setSessionId(newId);
-          }
-        }
-
-        return updated;
-      });
-
-      localStorage.removeItem(`hwl_session_${id}`);
+  const confirmSessionId = useCallback(
+    (serverId: string) => {
+      setActiveSessionId(serverId);
+      refreshSessions();
     },
-    [sessionId],
+    [refreshSessions],
   );
 
   return {
-    sessionId,
     sessions,
+    sessionsLoading,
+    activeSessionId,
+    setActiveSessionId,
     startNewSession,
-    switchSession,
-    updateSessionPreview,
     confirmSessionId,
-    deleteSession,
+    refreshSessions,
   };
 }

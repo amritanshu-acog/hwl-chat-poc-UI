@@ -1,5 +1,5 @@
-import { useEffect, useRef } from 'react'
-import type { Message } from '../types'
+import { useRef, useEffect } from 'react'
+import type { Message, LLMResponse } from '../types'
 import { MessageBubble } from './MessageBubble'
 import {
   ChatBubbleIcon,
@@ -18,8 +18,9 @@ interface QuickReply {
 interface Props {
   messages: Message[]
   isLoading: boolean
+  isLoadingHistory: boolean
   primaryColor: string
-  onQuickReply: (text: string) => void
+  onQuickReply: (text: string, messageId?: string, llmResponse?: LLMResponse) => void
   quickReplies?: QuickReply[]
 }
 
@@ -63,7 +64,6 @@ function WelcomeScreen({ quickReplies, onQuickReply, primaryColor }: {
 }) {
   return (
     <div className="flex-1 flex flex-col overflow-y-auto">
-      {/* Welcome hero */}
       <div className="flex flex-col items-center pt-8 pb-4 px-4">
         <div
           className="w-14 h-14 rounded-2xl flex items-center justify-center mb-3 shadow-md"
@@ -75,7 +75,6 @@ function WelcomeScreen({ quickReplies, onQuickReply, primaryColor }: {
         <p className="text-xs text-gray-500 text-center">Ask me anything related to HWL</p>
       </div>
 
-      {/* Quick reply buttons */}
       <div className="flex flex-col px-3 gap-2 pb-4">
         {quickReplies.map((qr, i) => (
           <button
@@ -98,12 +97,19 @@ function WelcomeScreen({ quickReplies, onQuickReply, primaryColor }: {
   )
 }
 
-export function MessageList({ messages, isLoading, primaryColor, onQuickReply, quickReplies }: Props) {
+export function MessageList({
+  messages, isLoading, isLoadingHistory, primaryColor, onQuickReply, quickReplies
+}: Props) {
   const bottomRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
-    bottomRef.current?.scrollIntoView({ behavior: 'smooth' })
-  }, [messages, isLoading])
+    const id = setTimeout(() => {
+      bottomRef.current?.scrollIntoView({
+        behavior: isLoadingHistory ? 'instant' : 'smooth'
+      })
+    }, 100)
+    return () => clearTimeout(id)
+  }, [messages, isLoading, isLoadingHistory])
 
   const suggestions = quickReplies ?? defaultQuickReplies
 

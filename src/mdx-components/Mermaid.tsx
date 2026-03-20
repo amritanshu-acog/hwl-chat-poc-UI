@@ -1,195 +1,229 @@
-import { useEffect, useRef, useState, useCallback } from 'react'
+import { useEffect, useRef, useState, useCallback, useId, type MouseEvent as RMouseEvent } from "react";
+import { ZoomIn, ZoomOut, RotateCcw, Download, Maximize2, Minimize2, X } from "lucide-react";
 
-interface Props {
-    chart: string
+interface MermaidProps {
+    chart: string;
+    label?: string;
 }
 
-export function Mermaid({ chart }: Props) {
-    const [svgContent, setSvgContent] = useState<string>('')
-    const [isFullscreen, setIsFullscreen] = useState(false)
-    const [scale, setScale] = useState(0.5)
-    const [pan, setPan] = useState({ x: 0, y: 0 })
-    const [isPanning, setIsPanning] = useState(false)
-    const panStart = useRef({ mx: 0, my: 0, px: 0, py: 0 })
+const SCALE_MIN = 0.15;
+const SCALE_MAX = 3.5;
+const STEP = 0.2;
+const clamp = (v: number, min: number, max: number) => Math.min(max, Math.max(min, v));
 
-    // Render mermaid once → store as SVG string in state
-    // This means the SVG survives fullscreen toggles — no re-render needed
+export function Mermaid({ chart, label = "Diagram" }: MermaidProps) {
+    const uid = useId();
+    const viewportRef = useRef<HTMLDivElement>(null);
+    const [svg, setSvg] = useState<string | null>(null);
+    const [error, setError] = useState(false);
+
+    const scaleRef = useRef(0.6);
+    const panRef = useRef({ x: 0, y: 0 });
+    const [, tick] = useState(0);
+    const update = useCallback(() => tick(n => n + 1), []);
+
+    const isPanning = useRef(false);
+    const panStart = useRef({ mx: 0, my: 0, px: 0, py: 0 });
+    const touchRef = useRef<{ type: "pan" | "pinch"; mx: number; my: number; px: number; py: number; dist: number } | null>(null);
+    const rafRef = useRef<number | null>(null);
+    const [fullscreen, setFullscreen] = useState(false);
+    const fsRef = useRef<HTMLDivElement>(null);
+
+    // Render
     useEffect(() => {
-        if (!chart) return
-        import('mermaid').then((m) => {
-            m.default.initialize({ startOnLoad: false, theme: 'neutral' })
-            const id = `mermaid-${Math.random().toString(36).slice(2)}`
-            m.default.render(id, chart.trim())
-                .then(({ svg }) => setSvgContent(svg))
-                .catch(() => setSvgContent(`<pre style="color:red;font-size:11px;padding:8px">${chart}</pre>`))
-        })
-    }, [chart])
+        if (!chart?.trim()) return;
+        let cancelled = false;
+        setSvg(null); setError(false);
+        import("mermaid").then(async (m) => {
+            if (cancelled) return;
+            m.default.initialize({ startOnLoad: false, theme: "neutral", suppressErrorRendering: true });
+            const id = `mmd-${uid.replace(/:/g, "")}-${Date.now()}`;
+            try {
+                const res = await m.default.render(id, chart.trim());
+                if (!cancelled) setSvg(res.svg);
+            } catch {
+                document.getElementById(id)?.remove();
+                if (!cancelled) setError(true);
+            }
+        });
+        return () => { cancelled = true; };
+    }, [chart, uid]);
 
-    function resetView() {
-        setScale(0.5)
-        setPan({ x: 0, y: 0 })
-    }
+    // Reset
+    const reset = useCallback(() => {
+        scaleRef.current = 0.6;
+        panRef.current = { x: 0, y: 0 };
+        update();
+    }, [update]);
 
-    function zoom(delta: number) {
-        setScale(prev => Math.min(3, Math.max(0.3, +(prev + delta).toFixed(2))))
-    }
+    // Zoom (animated)
+    const zoom = useCallback((delta: number) => {
+        if (rafRef.current) cancelAnimationFrame(rafRef.current);
+        const from = scaleRef.current;
+        const to = clamp(from + delta, SCALE_MIN, SCALE_MAX);
+        const t0 = performance.now();
+        const run = (now: number) => {
+            const p = Math.min(1, (now - t0) / 150);
+            scaleRef.current = from + (to - from) * (1 - Math.pow(1 - p, 3));
+            update();
+            if (p < 1) rafRef.current = requestAnimationFrame(run);
+        };
+        rafRef.current = requestAnimationFrame(run);
+    }, [update]);
 
-    const onMouseDown = useCallback((e: React.MouseEvent) => {
-        if (e.button !== 0) return
-        setIsPanning(true)
-        panStart.current = { mx: e.clientX, my: e.clientY, px: pan.x, py: pan.y }
-    }, [pan])
+    useEffect(() => () => { if (rafRef.current) cancelAnimationFrame(rafRef.current); }, []);
 
-    const onMouseMove = useCallback((e: React.MouseEvent) => {
-        if (!isPanning) return
-        setPan({
-            x: panStart.current.px + (e.clientX - panStart.current.mx),
-            y: panStart.current.py + (e.clientY - panStart.current.my),
-        })
-    }, [isPanning])
-
-    const onMouseUp = useCallback(() => setIsPanning(false), [])
-
-    const onWheel = useCallback((e: React.WheelEvent) => {
-        e.preventDefault()
-        zoom(e.deltaY < 0 ? 0.12 : -0.12)
-    }, [])
-
+    // Wheel + touch (non-passive)
     useEffect(() => {
-        if (!isFullscreen) return
-        const handler = (e: KeyboardEvent) => { if (e.key === 'Escape') { resetView(); setIsFullscreen(false) } }
-        window.addEventListener('keydown', handler)
-        return () => window.removeEventListener('keydown', handler)
-    }, [isFullscreen])
+        const el = viewportRef.current;
+        if (!el) return;
+        const onWheel = (e: WheelEvent) => {
+            e.preventDefault();
+            scaleRef.current = clamp(scaleRef.current + (e.deltaY < 0 ? 0.1 : -0.1), SCALE_MIN, SCALE_MAX);
+            update();
+        };
+        const onTouchStart = (e: TouchEvent) => {
+            if (e.touches.length === 1)
+                touchRef.current = { type: "pan", mx: e.touches[0].clientX, my: e.touches[0].clientY, px: panRef.current.x, py: panRef.current.y, dist: 0 };
+            else if (e.touches.length === 2) {
+                const dx = e.touches[0].clientX - e.touches[1].clientX;
+                const dy = e.touches[0].clientY - e.touches[1].clientY;
+                touchRef.current = { type: "pinch", mx: 0, my: 0, px: 0, py: 0, dist: Math.hypot(dx, dy) };
+            }
+        };
+        const onTouchMove = (e: TouchEvent) => {
+            if (!touchRef.current) return;
+            e.preventDefault();
+            if (touchRef.current.type === "pan" && e.touches.length === 1) {
+                panRef.current = { x: touchRef.current.px + (e.touches[0].clientX - touchRef.current.mx), y: touchRef.current.py + (e.touches[0].clientY - touchRef.current.my) };
+                update();
+            } else if (touchRef.current.type === "pinch" && e.touches.length === 2) {
+                const d = Math.hypot(e.touches[0].clientX - e.touches[1].clientX, e.touches[0].clientY - e.touches[1].clientY);
+                if (touchRef.current.dist > 0) { scaleRef.current = clamp(scaleRef.current * (d / touchRef.current.dist), SCALE_MIN, SCALE_MAX); update(); }
+                touchRef.current.dist = d;
+            }
+        };
+        el.addEventListener("wheel", onWheel, { passive: false });
+        el.addEventListener("touchstart", onTouchStart, { passive: false });
+        el.addEventListener("touchmove", onTouchMove, { passive: false });
+        el.addEventListener("touchend", () => { touchRef.current = null; });
+        return () => {
+            el.removeEventListener("wheel", onWheel);
+            el.removeEventListener("touchstart", onTouchStart);
+            el.removeEventListener("touchmove", onTouchMove);
+        };
+    }, [update]);
 
-    function Controls() {
-        return (
-            <div className="flex items-center gap-0.5 bg-white border border-gray-200 rounded-lg px-1 py-0.5 shadow-sm">
-                <button onClick={() => zoom(0.15)} title="Zoom in"
-                    className="flex items-center justify-center w-6 h-6 rounded text-gray-500 hover:text-gray-800 hover:bg-gray-100 transition-colors">
-                    <svg width="11" height="11" viewBox="0 0 11 11" fill="none">
-                        <circle cx="5" cy="5" r="3.5" stroke="currentColor" strokeWidth="1.2" />
-                        <path d="M5 3.5V6.5M3.5 5H6.5" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" />
-                        <path d="M7.5 7.5L9.5 9.5" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" />
-                    </svg>
-                </button>
-                <button onClick={() => zoom(-0.15)} title="Zoom out"
-                    className="flex items-center justify-center w-6 h-6 rounded text-gray-500 hover:text-gray-800 hover:bg-gray-100 transition-colors">
-                    <svg width="11" height="11" viewBox="0 0 11 11" fill="none">
-                        <circle cx="5" cy="5" r="3.5" stroke="currentColor" strokeWidth="1.2" />
-                        <path d="M3.5 5H6.5" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" />
-                        <path d="M7.5 7.5L9.5 9.5" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" />
-                    </svg>
-                </button>
-                <button onClick={resetView} title="Reset view"
-                    className="flex items-center justify-center w-6 h-6 rounded text-gray-500 hover:text-gray-800 hover:bg-gray-100 transition-colors">
-                    <svg width="11" height="11" viewBox="0 0 11 11" fill="none">
-                        <path d="M2 5.5A3.5 3.5 0 015.5 2a3.5 3.5 0 012.8 1.4" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" />
-                        <path d="M8.3 2.5V4.5H6.3" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round" />
-                        <path d="M9 5.5A3.5 3.5 0 015.5 9 3.5 3.5 0 012 5.5" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" />
-                    </svg>
-                </button>
-                <div className="w-px h-3.5 bg-gray-200 mx-0.5" />
-                <span className="text-[9px] text-gray-400 font-medium px-1 min-w-[28px] text-center tabular-nums">
-                    {Math.round(scale * 100)}%
-                </span>
-                <div className="w-px h-3.5 bg-gray-200 mx-0.5" />
-                <button
-                    onClick={() => { resetView(); setIsFullscreen(f => !f) }}
-                    title={isFullscreen ? 'Exit fullscreen' : 'Fullscreen'}
-                    className="flex items-center justify-center w-6 h-6 rounded text-gray-500 hover:text-gray-800 hover:bg-gray-100 transition-colors"
-                >
-                    {isFullscreen
-                        ? <svg width="11" height="11" viewBox="0 0 11 11" fill="none">
-                            <path d="M4 1.5H2a.5.5 0 00-.5.5v2M7 1.5h2a.5.5 0 01.5.5v2M4 9.5H2a.5.5 0 01-.5-.5V7M7 9.5h2a.5.5 0 00.5-.5V7" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" />
-                        </svg>
-                        : <svg width="11" height="11" viewBox="0 0 11 11" fill="none">
-                            <path d="M1.5 4V2a.5.5 0 01.5-.5h2M7.5 1.5H9a.5.5 0 01.5.5v2M9.5 7v2a.5.5 0 01-.5.5H7M3.5 9.5H2a.5.5 0 01-.5-.5V7" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" />
-                        </svg>
-                    }
-                </button>
+    // Mouse pan
+    const onMouseDown = useCallback((e: RMouseEvent) => {
+        if (e.button !== 0) return;
+        isPanning.current = true;
+        panStart.current = { mx: e.clientX, my: e.clientY, px: panRef.current.x, py: panRef.current.y };
+    }, []);
+    const onMouseMove = useCallback((e: RMouseEvent) => {
+        if (!isPanning.current) return;
+        panRef.current = { x: panStart.current.px + (e.clientX - panStart.current.mx), y: panStart.current.py + (e.clientY - panStart.current.my) };
+        update();
+    }, [update]);
+    const onMouseUp = useCallback(() => { isPanning.current = false; }, []);
+
+    // Fullscreen
+    const openFs = useCallback(() => { reset(); setFullscreen(true); }, [reset]);
+    const closeFs = useCallback(() => { reset(); setFullscreen(false); }, [reset]);
+    useEffect(() => {
+        if (!fullscreen || !fsRef.current) return;
+        fsRef.current.requestFullscreen?.().catch(() => { });
+        const onChange = () => { if (!document.fullscreenElement) closeFs(); };
+        document.addEventListener("fullscreenchange", onChange);
+        return () => document.removeEventListener("fullscreenchange", onChange);
+    }, [fullscreen, closeFs]);
+    useEffect(() => {
+        if (!fullscreen) return;
+        const fn = (e: KeyboardEvent) => { if (e.key === "Escape") closeFs(); };
+        window.addEventListener("keydown", fn);
+        return () => window.removeEventListener("keydown", fn);
+    }, [fullscreen, closeFs]);
+    useEffect(() => {
+        document.body.style.overflow = fullscreen ? "hidden" : "";
+        return () => { document.body.style.overflow = ""; };
+    }, [fullscreen]);
+
+    // Download
+    const download = useCallback(() => {
+        if (!svg) return;
+        const a = Object.assign(document.createElement("a"), { href: URL.createObjectURL(new Blob([svg], { type: "image/svg+xml" })), download: "diagram.svg" });
+        a.click(); URL.revokeObjectURL(a.href);
+    }, [svg]);
+
+    // Controls
+    const Controls = () => (
+        <div className="flex items-center gap-0.5 rounded-lg border border-black/10 bg-white/90 px-1 py-0.5 shadow-sm backdrop-blur-sm"
+            onMouseDown={e => e.stopPropagation()} onTouchStart={e => e.stopPropagation()}>
+            <Btn onClick={() => zoom(STEP)} title="Zoom in"><ZoomIn size={12} /></Btn>
+            <Btn onClick={() => zoom(-STEP)} title="Zoom out"><ZoomOut size={12} /></Btn>
+            <Btn onClick={reset} title="Reset"><RotateCcw size={12} /></Btn>
+            <div className="mx-1 h-3.5 w-px bg-gray-200" />
+            <span className="min-w-[32px] px-1 text-center font-mono text-[10px] tabular-nums text-gray-400">
+                {Math.round(scaleRef.current * 100)}%
+            </span>
+            <div className="mx-1 h-3.5 w-px bg-gray-200" />
+            {svg && <Btn onClick={download} title="Download SVG"><Download size={12} /></Btn>}
+            <Btn onClick={fullscreen ? closeFs : openFs} title={fullscreen ? "Exit fullscreen" : "Fullscreen"}>
+                {fullscreen ? <Minimize2 size={12} /> : <Maximize2 size={12} />}
+            </Btn>
+        </div>
+    );
+
+    // Viewport
+    const Viewport = ({ fs }: { fs: boolean }) => (
+        <div ref={viewportRef} role="img" aria-label={label} tabIndex={0}
+            className={`relative overflow-hidden w-full select-none touch-none bg-slate-50 border border-slate-200 outline-none transition-colors focus-visible:border-blue-500 focus-visible:ring-2 focus-visible:ring-blue-500/20 ${fs ? "flex-1 min-h-0 rounded-none border-0" : "rounded-xl [height:clamp(180px,46vw,380px)]"}`}
+            style={{ cursor: isPanning.current ? "grabbing" : "grab" }}
+            onMouseDown={onMouseDown} onMouseMove={onMouseMove} onMouseUp={onMouseUp} onMouseLeave={onMouseUp}>
+
+            <div className="w-full h-full flex items-center justify-center p-6 will-change-transform"
+                style={{ transform: `translate(${panRef.current.x}px,${panRef.current.y}px) scale(${scaleRef.current})`, transformOrigin: "center" }}
+                aria-hidden="true">
+                {svg && <div className="[&_svg]:max-w-full [&_svg]:h-auto" dangerouslySetInnerHTML={{ __html: svg }} />}
+                {!svg && !error && <span className="h-7 w-7 rounded-full border-2 border-slate-200 border-t-blue-500 animate-spin block" />}
+                {error && <p className="text-sm text-red-400">Failed to render diagram.</p>}
             </div>
-        )
-    }
 
-    // Single viewport component — receives SVG via dangerouslySetInnerHTML from state
-    // so it always has the content regardless of fullscreen mount/unmount
-    function Viewport({ fullscreen }: { fullscreen: boolean }) {
-        return (
-            <div
-                className="relative overflow-hidden rounded-xl"
-                style={{
-                    backgroundColor: '#f8fafc',
-                    border: '1px solid #e2e8f0',
-                    height: fullscreen ? '100%' : '360px',
-                    cursor: isPanning ? 'grabbing' : 'grab',
-                    userSelect: 'none',
-                }}
-                onMouseDown={onMouseDown}
-                onMouseMove={onMouseMove}
-                onMouseUp={onMouseUp}
-                onMouseLeave={onMouseUp}
-                onWheel={onWheel}
-            >
-                <div
-                    style={{
-                        transform: `translate(${pan.x}px, ${pan.y}px) scale(${scale})`,
-                        transformOrigin: 'center center',
-                        transition: isPanning ? 'none' : 'transform 0.15s ease',
-                        width: '100%',
-                        height: '100%',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        padding: '16px',
-                        boxSizing: 'border-box',
-                    }}
-                >
-                    {svgContent
-                        ? <div
-                            style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
-                            dangerouslySetInnerHTML={{ __html: svgContent }}
-                        />
-                        : <span style={{ fontSize: '11px', color: '#94a3b8' }}>Loading diagram…</span>
-                    }
-                </div>
-
-                <div className="absolute bottom-2 right-2 z-10" onMouseDown={e => e.stopPropagation()}>
-                    <Controls />
-                </div>
-
-                <div className="absolute top-2 left-2 text-[9px] text-gray-400 pointer-events-none select-none">
-                    Drag to pan · Scroll to zoom
-                </div>
-            </div>
-        )
-    }
-
-    if (isFullscreen) {
-        return (
-            <div
-                className="fixed inset-0 z-50 flex flex-col p-4"
-                style={{ backgroundColor: 'rgba(15,23,42,0.88)', backdropFilter: 'blur(4px)' }}
-            >
-                <div className="flex items-center justify-between mb-3">
-                    <span className="text-white text-xs font-medium opacity-70">Diagram</span>
-                    <button
-                        className="text-white text-xs opacity-60 hover:opacity-100 transition-opacity px-2 py-1 rounded border border-white/20"
-                        onClick={() => { resetView(); setIsFullscreen(false) }}
-                    >
-                        esc · close
-                    </button>
-                </div>
-                <div className="flex-1 min-h-0">
-                    <Viewport fullscreen={true} />
-                </div>
-            </div>
-        )
-    }
+            <div className="absolute bottom-2.5 right-2.5 z-10"><Controls /></div>
+            <p className="absolute top-2 left-2.5 pointer-events-none text-[10px] text-gray-400/60 select-none">
+                <span className="hidden sm:inline">Scroll to zoom · Drag to pan</span>
+                <span className="sm:hidden">Pinch · Drag</span>
+            </p>
+        </div>
+    );
 
     return (
-        <div className="my-2">
-            <Viewport fullscreen={false} />
+        <div className="w-full">
+            <Viewport fs={false} />
+            {fullscreen && (
+                <div ref={fsRef} role="dialog" aria-modal="true"
+                    className="fixed inset-0 z-50 flex flex-col bg-slate-950/90 backdrop-blur-md">
+                    <div className="flex shrink-0 items-center justify-between border-b border-white/10 px-4 py-3">
+                        <span className="text-xs font-medium uppercase tracking-widest text-white/40">{label}</span>
+                        <button onClick={closeFs}
+                            className="flex items-center gap-1.5 rounded border border-white/15 bg-white/5 px-2.5 py-1 text-[11px] text-white/40 hover:bg-white/10 hover:text-white/80 transition-colors">
+                            <X size={11} /> esc
+                        </button>
+                    </div>
+                    <div className="flex flex-1 min-h-0 flex-col [&_.bg-slate-50]:bg-slate-900 [&_.border-slate-200]:border-slate-700/50">
+                        <Viewport fs={true} />
+                    </div>
+                </div>
+            )}
         </div>
-    )
+    );
+}
+
+function Btn({ onClick, title, children }: { onClick: () => void; title: string; children: React.ReactNode }) {
+    return (
+        <button onClick={onClick} title={title} aria-label={title}
+            className="flex h-6 w-6 items-center justify-center rounded text-gray-400 hover:bg-gray-100 hover:text-gray-700 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-400">
+            {children}
+        </button>
+    );
 }

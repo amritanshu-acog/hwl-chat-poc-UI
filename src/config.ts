@@ -7,11 +7,7 @@
 
 export const APP_CONFIG = {
   // ── API ───────────────────────────────────────────────
-  apiUrl: import.meta.env.VITE_API_URL ?? "http://localhost:3000/api",
-
-  // ── Feature flags ────────────────────────────────────
-  /** When true the app uses dummy.ts data; when false it calls `apiUrl`. */
-  demoMode: true,
+  apiUrl: import.meta.env.VITE_API_URL as string | undefined,
 
   // ── Branding ─────────────────────────────────────────
   title: "HWL Assistant",
@@ -21,13 +17,11 @@ export const APP_CONFIG = {
 
   // ── JWT auth ─────────────────────────────────────────
   /**
-   * In real integration the host app calls window.postMessage or passes the
-   * token via a query param / custom React prop.
-   * For demo we auto-generate a fake token on first load.
+   * The host app passes a signed JWT via the URL query param (`?token=...`).
+   * On subsequent loads the token is read from sessionStorage.
    */
   jwtParamName: "token", // URL query param name the host app passes
   jwtStorageKey: "hwl_jwt_token",
-  jwtSecret: import.meta.env.VITE_JWT_SECRET ?? "", // ← add this
 
   // ── Chat defaults ─────────────────────────────────────
   placeholder: "Ask me anything…",

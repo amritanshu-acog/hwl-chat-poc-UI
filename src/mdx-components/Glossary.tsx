@@ -1,156 +1,135 @@
-import { useState } from "react";
+import { useState, useId } from "react";
 
-interface GlossaryItem {
+export interface GlossaryItem {
     term: string;
     definition: string;
+    category?: string;
 }
 
-interface GlossaryProps {
+export interface GlossaryProps {
     items: GlossaryItem[];
-    placeholder?: string;
+    title?: string;
+    showCategories?: boolean;
 }
 
-export function Glossary({
-    items,
-    placeholder = "Search fields...",
-}: GlossaryProps) {
-    const [query, setQuery] = useState("");
+interface RowProps {
+    item: GlossaryItem;
+    termId: string;
+    defId: string;
+}
+
+function GlossaryRow({ item, termId, defId }: RowProps) {
+    return (
+        <div
+            role="row"
+            className="group flex flex-col sm:flex-row sm:items-baseline gap-y-1 sm:gap-y-0 rounded-xl border border-gray-100 bg-white px-4 py-3 shadow-sm transition-all hover:border-gray-200 hover:shadow-md"
+            aria-labelledby={termId}
+            aria-describedby={defId}
+        >
+            {/* Term cell — full width on mobile, fixed 48 on sm+ */}
+            <div
+                role="cell"
+                className="flex items-start gap-2 shrink-0 w-full sm:w-48"
+            >
+                <span className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-gray-300 transition-colors group-hover:bg-gray-500" aria-hidden="true" />
+                <div className="flex flex-wrap items-start gap-x-2 gap-y-1 min-w-0">
+                    <dt id={termId} className="text-sm font-semibold text-gray-800 break-words">
+                        {item.term}
+                    </dt>
+                    {item.category && (
+                        <span className="self-start shrink-0 rounded px-1.5 py-0.5 text-[10px] font-medium uppercase tracking-wide bg-amber-50 text-amber-700 border border-amber-200">
+                            {item.category}
+                        </span>
+                    )}
+                </div>
+            </div>
+
+            {/* Divider — desktop only */}
+            <div className="hidden sm:block self-stretch w-px bg-gray-100 mx-4 shrink-0" aria-hidden="true" />
+
+            {/* Definition — must have min-w-0 so it can shrink and wrap */}
+            <dd
+                id={defId}
+                role="cell"
+                className="flex-1 min-w-0 pl-[22px] sm:pl-0 text-sm text-gray-500 leading-relaxed break-words"
+            >
+                {item.definition}
+            </dd>
+        </div>
+    );
+}
+
+export function Glossary({ items, title, showCategories = true }: GlossaryProps) {
+    const [activeCategory, setActiveCategory] = useState<string | null>(null);
+    const uid = useId();
+
+    const categories = showCategories
+        ? Array.from(new Set(items.flatMap((i) => (i.category ? [i.category] : [])))).sort()
+        : [];
 
     const filtered = items.filter(
-        (item) =>
-            item.term.toLowerCase().includes(query.toLowerCase()) ||
-            item.definition.toLowerCase().includes(query.toLowerCase())
+        (item) => !activeCategory || item.category === activeCategory
     );
 
-    const highlight = (text: string) => {
-        if (!query) return text;
-        const parts = text.split(new RegExp(`(${query})`, "gi"));
-        return parts.map((part, i) =>
-            part.toLowerCase() === query.toLowerCase() ? (
-                <mark
-                    key={i}
-                    className="bg-yellow-100 text-yellow-800 rounded px-0.5"
-                >
-                    {part}
-                </mark>
-            ) : (
-                part
-            )
-        );
-    };
-
     return (
-        <div className="flex flex-col gap-4">
-            {/* Search */}
-            <div className="relative">
-                <svg
-                    className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"
-                    xmlns="http://www.w3.org/2000/svg"
-                    width="15"
-                    height="15"
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    stroke="currentColor"
-                    strokeWidth="2"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                >
-                    <circle cx="11" cy="11" r="8" />
-                    <line x1="21" y1="21" x2="16.65" y2="16.65" />
-                </svg>
-                <input
-                    type="text"
-                    value={query}
-                    onChange={(e) => setQuery(e.target.value)}
-                    placeholder={placeholder}
-                    className="w-full rounded-xl border border-gray-200 bg-gray-50 py-2.5 pl-9 pr-4 text-sm text-gray-700 placeholder-gray-400 outline-none transition-all focus:border-gray-300 focus:bg-white focus:shadow-sm"
-                />
-                {query && (
-                    <button
-                        onClick={() => setQuery("")}
-                        className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 transition-colors"
-                    >
-                        <svg
-                            xmlns="http://www.w3.org/2000/svg"
-                            width="14"
-                            height="14"
-                            viewBox="0 0 24 24"
-                            fill="none"
-                            stroke="currentColor"
-                            strokeWidth="2"
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                        >
-                            <line x1="18" y1="6" x2="6" y2="18" />
-                            <line x1="6" y1="6" x2="18" y2="18" />
-                        </svg>
-                    </button>
-                )}
-            </div>
+        <div className="flex flex-col gap-3 w-full box-border">
+            {title && (
+                <h2 className="text-base font-semibold text-gray-800">{title}</h2>
+            )}
 
-            {/* Count */}
-            <div className="flex items-center justify-between px-1">
-                <p className="text-xs text-gray-400">
-                    {filtered.length === items.length
-                        ? `${items.length} fields`
-                        : `${filtered.length} of ${items.length} fields`}
-                </p>
-                {query && filtered.length === 0 && (
-                    <p className="text-xs text-gray-400">No matches found</p>
-                )}
-            </div>
-
-            {/* Items */}
-            {filtered.length === 0 ? (
-                <div className="flex flex-col items-center gap-2 py-8 text-center">
-                    <svg
-                        className="text-gray-300"
-                        xmlns="http://www.w3.org/2000/svg"
-                        width="32"
-                        height="32"
-                        viewBox="0 0 24 24"
-                        fill="none"
-                        stroke="currentColor"
-                        strokeWidth="1.5"
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                    >
-                        <circle cx="11" cy="11" r="8" />
-                        <line x1="21" y1="21" x2="16.65" y2="16.65" />
-                    </svg>
-                    <p className="text-sm text-gray-400">
-                        No fields match{" "}
-                        <span className="font-medium text-gray-500">"{query}"</span>
-                    </p>
+            {/* Category pills */}
+            {categories.length > 0 && (
+                <div className="flex flex-wrap gap-2" role="group" aria-label="Filter by category">
                     <button
-                        onClick={() => setQuery("")}
-                        className="text-xs text-gray-400 underline underline-offset-2 hover:text-gray-600 transition-colors"
+                        className={`rounded-full border px-3 py-1 text-xs font-medium transition-colors ${activeCategory === null
+                            ? "border-gray-800 bg-gray-800 text-white"
+                            : "border-gray-200 bg-white text-gray-500 hover:border-gray-300 hover:text-gray-700"
+                            }`}
+                        onClick={() => setActiveCategory(null)}
+                        aria-pressed={activeCategory === null}
                     >
-                        Clear search
+                        All
                     </button>
-                </div>
-            ) : (
-                <div className="flex flex-col gap-2">
-                    {filtered.map((item, i) => (
-                        <div
-                            key={i}
-                            className="group flex flex-col sm:flex-row sm:items-start gap-1.5 sm:gap-0 rounded-xl border border-gray-100 bg-white px-4 py-3 shadow-sm transition-all hover:border-gray-200 hover:shadow-md"
+                    {categories.map((cat) => (
+                        <button
+                            key={cat}
+                            className={`rounded-full border px-3 py-1 text-xs font-medium transition-colors ${activeCategory === cat
+                                ? "border-gray-800 bg-gray-800 text-white"
+                                : "border-gray-200 bg-white text-gray-500 hover:border-gray-300 hover:text-gray-700"
+                                }`}
+                            onClick={() => setActiveCategory(activeCategory === cat ? null : cat)}
+                            aria-pressed={activeCategory === cat}
                         >
-                            <div className="flex sm:w-48 shrink-0 items-center gap-2">
-                                <span className="flex h-1.5 w-1.5 rounded-full bg-gray-300 group-hover:bg-gray-400 transition-colors" />
-                                <span className="text-sm font-semibold text-gray-800">
-                                    {highlight(item.term)}
-                                </span>
-                            </div>
-                            <div className="sm:border-l sm:border-gray-100 sm:pl-4">
-                                <p className="text-sm text-gray-500 leading-relaxed">
-                                    {highlight(item.definition)}
-                                </p>
-                            </div>
-                        </div>
+                            {cat}
+                        </button>
                     ))}
                 </div>
             )}
+
+            {/* Count */}
+            <p className="px-1 text-xs text-gray-400">
+                {filtered.length === items.length
+                    ? `${items.length} term${items.length !== 1 ? "s" : ""}`
+                    : `${filtered.length} of ${items.length} terms`}
+            </p>
+
+            {/* List */}
+            <dl
+                id={`${uid}-list`}
+                className="flex flex-col gap-2"
+                role="grid"
+                aria-label="Glossary entries"
+                aria-rowcount={filtered.length}
+            >
+                {filtered.map((item, i) => (
+                    <GlossaryRow
+                        key={`${item.term}-${i}`}
+                        item={item}
+                        termId={`${uid}-term-${i}`}
+                        defId={`${uid}-def-${i}`}
+                    />
+                ))}
+            </dl>
         </div>
     );
 }

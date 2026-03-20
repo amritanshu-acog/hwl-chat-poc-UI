@@ -5,9 +5,9 @@ import { Choices } from "../mdx-components/Choices";
 import { Escalation } from "../mdx-components/Escalation";
 import { Summary } from "../mdx-components/Summary";
 import { Mermaid } from "../mdx-components/Mermaid";
-import { FunnelChart } from "../mdx-components/FunnelChart";
 import { NotFound } from "../mdx-components/NotFound";
-import { Glossary } from "../mdx-components/Glossary"; // ← new
+import { Glossary } from "../mdx-components/Glossary";
+import { FollowUp } from "../mdx-components/FollowUp";
 
 export const mdxComponents = {
   Alert,
@@ -17,7 +17,7 @@ export const mdxComponents = {
   Escalation,
   Summary,
   Mermaid,
-  FunnelChart,
   NotFound,
   Glossary,
+  FollowUp,
 };

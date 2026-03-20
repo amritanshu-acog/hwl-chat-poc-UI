@@ -63,10 +63,6 @@ export function Steps({
                     </div>
                 ))}
             </div>
-
-            {followUp && (
-                <p className="text-xs text-gray-500 mt-1">{followUp}</p>
-            )}
         </div>
     );
 }

@@ -1,6 +1,6 @@
 import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
-import type { Message } from '../types'
+import type { Message, LLMResponse } from '../types'
 import type { Components } from 'react-markdown'
 import { useMDX } from '../hooks/useMDX'
 import { mdxComponents } from '../lib/mdxComponents'
@@ -9,7 +9,7 @@ import { Citations } from './Citations'
 interface Props {
   message: Message
   primaryColor: string
-  onQuickReply?: (text: string) => void
+  onQuickReply?: (text: string, messageId?: string, llmResponse?: LLMResponse) => void
 }
 
 function formatTime(date: Date): string {
@@ -18,8 +18,9 @@ function formatTime(date: Date): string {
 
 export function MessageBubble({ message, primaryColor, onQuickReply }: Props) {
   const isUser = message.role === 'user'
+  const isClarify = !isUser && message.action === 'clarify'
 
-  const mdxBody = isUser ? null : message.content
+  const mdxBody = isUser || message.isHistorical ? null : message.content
   const citations = isUser ? [] : (message.citations ?? [])
 
   const { Content: MDXContent, error: mdxError } = useMDX(mdxBody ?? '')
@@ -69,7 +70,16 @@ export function MessageBubble({ message, primaryColor, onQuickReply }: Props) {
         ...Object.fromEntries(
           Object.entries(mdxComponents).map(([key, Comp]) => [
             key,
-            (props: any) => <Comp {...props} primaryColor={primaryColor} onSelect={onQuickReply} />,
+            (props: any) => (
+              <Comp
+                {...props}
+                messageId={message.id}
+                primaryColor={primaryColor}
+                onSelect={(value: string) =>
+                  onQuickReply?.(value, message.id, message.llmResponse)
+                }
+              />
+            ),
           ])
         )
       }
@@ -83,15 +93,25 @@ export function MessageBubble({ message, primaryColor, onQuickReply }: Props) {
     )
   }
 
+  const bubbleClass = isUser
+    ? 'max-w-[85%] text-white rounded-br-sm'
+    : isClarify
+      ? 'w-[60%] bg-indigo-50 text-gray-800 rounded-bl-sm shadow-sm border border-indigo-100'
+      : 'w-[60%] bg-white text-gray-800 rounded-bl-sm shadow-sm border border-gray-100'
+
   return (
     <div className={`flex flex-col gap-1.5 ${isUser ? 'items-end' : 'items-start'}`}>
       <div
-        className={`rounded-2xl px-4 py-3 text-xs ${isUser
-          ? 'max-w-[85%] text-white rounded-br-sm'
-          : 'w-[60%] bg-white text-gray-800 rounded-bl-sm shadow-sm border border-gray-100'
-          }`}
+        className={`rounded-2xl px-4 py-3 text-xs ${bubbleClass}`}
         style={isUser ? { backgroundColor: primaryColor } : undefined}
       >
+        {isClarify && (
+          <p className="mb-2 flex items-center gap-1 text-[10px] font-medium italic text-indigo-400">
+            <span>🤔</span>
+            <span>I have a quick question</span>
+          </p>
+        )}
+
         {renderContent()}
 
         {!isUser && <Citations citations={citations} />}

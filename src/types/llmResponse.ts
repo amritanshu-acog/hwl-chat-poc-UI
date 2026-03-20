@@ -4,7 +4,12 @@ export type ResponseAction =
   | "not_found"
   | "quota_exceeded";
 
-export type ResponseType = "answer" | "options" | "mixed" | "notfound";
+export type ResponseType =
+  | "answer"
+  | "options"
+  | "mixed"
+  | "notfound"
+  | "clarify";
 
 export interface LLMAlert {
   severity: "warning" | "info" | "danger";
@@ -20,11 +25,6 @@ export interface LLMStep {
 export interface LLMOption {
   label: string;
   value: string;
-  description?: string;
-}
-
-export interface LLMFunnelStage {
-  label: string;
   description?: string;
 }
 
@@ -63,7 +63,6 @@ export interface LLMResponse {
   summary: LLMSummary | null;
   escalation: LLMEscalation | null;
   chart: string | null;
-  stages: LLMFunnelStage[] | null;
-  followUp?: string | null;
+  followUp: string | null;
   citations: LLMCitation[];
 }

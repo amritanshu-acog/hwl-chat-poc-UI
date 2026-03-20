@@ -5,5 +5,5 @@
  * Import from here when embedding the widget in a host app.
  */
 
-export type { HWLAssistantProps, Message, Session } from "./types";
+export type { HWLAssistantProps, Message } from "./types";
 export { sendMessage } from "./services/api";

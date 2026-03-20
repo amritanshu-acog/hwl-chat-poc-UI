@@ -1,11 +1,27 @@
-import type { LLMResponse } from "../types/llmResponse";
+import type { LLMResponse, LLMOption } from "../types/llmResponse";
 
 function prop(value: unknown): string {
   if (typeof value === "string") return `"${value.replace(/"/g, '\\"')}"`;
   return `{${JSON.stringify(value)}}`;
 }
 
-export function jsonToMdx(response: LLMResponse): string {
+function choiceOrWidget(
+  question: unknown,
+  options: LLMOption[],
+  selectedOption?: string,
+): string {
+  // Always emit <Choices /> — when selectedOption is set, pass it as a prop
+  // so the component renders the frozen/selected UI instead of interactive buttons.
+  if (selectedOption) {
+    return `<Choices\n  question=${prop(question)}\n  options={${JSON.stringify(options)}}\n  selectedOption=${prop(selectedOption)}\n/>`;
+  }
+  return `<Choices\n  question=${prop(question)}\n  options={${JSON.stringify(options)}}\n/>`;
+}
+
+export function jsonToMdx(
+  response: LLMResponse,
+  selectedOption?: string,
+): string {
   const parts: string[] = [];
 
   // Alert always first
@@ -16,20 +32,23 @@ export function jsonToMdx(response: LLMResponse): string {
     );
   }
 
-  // Title
-  if (response.title) {
+  const rt = response.response_type;
+
+  // Title — skip for notfound (title is a prop on <NotFound />, not a heading)
+  if (response.title && rt !== "notfound") {
     parts.push(`## ${response.title}`);
   }
 
-  // Intro
-  if (response.intro) {
+  // Intro — skip for notfound (passed as message prop to <NotFound />)
+  if (response.intro && rt !== "notfound") {
     parts.push(response.intro);
   }
 
-  const rt = response.response_type;
-
   // ── answer ────────────────────────────────────────────────────────────
   if (rt === "answer") {
+    if (response.chart) {
+      parts.push(`<Mermaid chart={${JSON.stringify(response.chart)}} />`);
+    }
     if (response.steps?.length) {
       const followUp = response.followUp
         ? `\n  followUp=${prop(response.followUp)}`
@@ -50,7 +69,7 @@ export function jsonToMdx(response: LLMResponse): string {
     }
     if (response.options?.length) {
       parts.push(
-        `<Choices\n  question=${prop(response.title)}\n  options={${JSON.stringify(response.options)}}\n/>`,
+        choiceOrWidget(response.title, response.options, selectedOption),
       );
     }
     if (response.summary) {
@@ -68,7 +87,7 @@ export function jsonToMdx(response: LLMResponse): string {
   if (rt === "options") {
     if (response.options?.length) {
       parts.push(
-        `<Choices\n  question=${prop(response.title)}\n  options={${JSON.stringify(response.options)}}\n/>`,
+        choiceOrWidget(response.title, response.options, selectedOption),
       );
     }
   }
@@ -76,13 +95,7 @@ export function jsonToMdx(response: LLMResponse): string {
   // ── mixed ─────────────────────────────────────────────────────────────
   if (rt === "mixed") {
     if (response.chart) {
-      const chart = response.chart.replace(/`/g, "\\`");
-      parts.push(`<Mermaid chart={\`${chart}\`} />`);
-    }
-    if (response.stages?.length) {
-      parts.push(
-        `<FunnelChart\n  title=${prop(response.title)}\n  stages={${JSON.stringify(response.stages)}}\n/>`,
-      );
+      parts.push(`<Mermaid chart={${JSON.stringify(response.chart)}} />`);
     }
     if (response.steps?.length) {
       const followUp = response.followUp
@@ -99,7 +112,7 @@ export function jsonToMdx(response: LLMResponse): string {
     }
     if (response.options?.length) {
       parts.push(
-        `<Choices\n  question=${prop(response.title)}\n  options={${JSON.stringify(response.options)}}\n/>`,
+        choiceOrWidget(response.title, response.options, selectedOption),
       );
     }
     if (response.summary) {
@@ -120,18 +133,40 @@ export function jsonToMdx(response: LLMResponse): string {
     );
     if (response.options?.length) {
       parts.push(
-        `<Choices\n  question=${prop(response.title)}\n  options={${JSON.stringify(response.options)}}\n/>`,
+        choiceOrWidget(
+          response.title || response.intro || "",
+          response.options,
+          selectedOption,
+        ),
       );
     }
   }
 
-  // Escalation always last
+  // ── clarify ───────────────────────────────────────────────────────────
+  if (rt === "clarify") {
+    if (response.options?.length) {
+      parts.push(
+        choiceOrWidget(
+          response.title || response.intro || "",
+          response.options,
+          selectedOption,
+        ),
+      );
+    }
+  }
+
+  // Escalation always last before followUp
   if (response.escalation) {
     const { title, message, reason } = response.escalation;
     const reasonStr = reason ? `\n  reason=${prop(reason)}` : "";
     parts.push(
       `<Escalation\n  title=${prop(title)}\n  message=${prop(message)}${reasonStr}\n/>`,
     );
+  }
+
+  // Standalone followUp
+  if (response.followUp) {
+    parts.push(`<FollowUp question=${prop(response.followUp)} />`);
   }
 
   return parts.join("\n\n");

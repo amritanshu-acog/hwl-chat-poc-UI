@@ -4,48 +4,37 @@
  * Handles JWT token acquisition and validation.
  *
  * Flow:
- *  1. Check URL query param (host app redirect)
+ *  1. Check URL query param (host app redirects with ?token=...)
  *  2. Fall back to sessionStorage (already authenticated)
- *  3. In demoMode: generate a real signed token using jose
- *  4. Otherwise: show an "Unauthorized" gate
+ *  3. [DEV ONLY] Fall back to VITE_DEV_TOKEN from .env.local
+ *  4. Otherwise: surface an "Unauthorized" gate
+ *
+ * Token signature verification is the server's responsibility.
+ * The client only decodes the payload for UX purposes (identity, expiry).
+ *
+ * Dev mode:
+ *  Set VITE_DEV_TOKEN=<a valid jwt> in .env.local to skip the host-app
+ *  redirect during local development. This env var must NOT be set in
+ *  production — it will never be bundled unless explicitly defined.
  */
 
 import { useState, useEffect } from "react";
 import { APP_CONFIG } from "../config";
-import { generateDemoToken } from "../utils/generateDemoToken";
+import { decodeJWT, isTokenValid } from "../utils/jwt";
+import type { JWTPayload } from "../utils/jwt";
+
+export type { JWTPayload };
 
 export type AuthState =
   | { status: "loading" }
   | { status: "authenticated"; token: string; payload: JWTPayload }
   | { status: "unauthenticated"; reason: string };
 
-export interface JWTPayload {
-  sub: string;
-  name?: string;
-  email?: string;
-  exp?: number;
-  iat?: number;
-  [key: string]: unknown;
-}
-
-/** Cheap base64url decode (no signature verification in demo). */
-function decodeJWT(token: string): JWTPayload | null {
-  try {
-    const parts = token.split(".");
-    if (parts.length !== 3) return null;
-    const payload = parts[1].replace(/-/g, "+").replace(/_/g, "/");
-    const json = atob(payload);
-    return JSON.parse(json) as JWTPayload;
-  } catch {
-    return null;
-  }
-}
-
 export function useAuth(): AuthState {
   const [authState, setAuthState] = useState<AuthState>({ status: "loading" });
 
   useEffect(() => {
-    // 1. Check URL param (host app redirects with ?token=...)
+    // 1. Check URL param — host app redirects with ?token=...
     const params = new URLSearchParams(window.location.search);
     const urlToken = params.get(APP_CONFIG.jwtParamName);
 
@@ -61,34 +50,50 @@ export function useAuth(): AuthState {
         window.history.replaceState({}, "", cleanUrl);
         setAuthState({ status: "authenticated", token: urlToken, payload });
         return;
+      } else {
+        console.warn(
+          "[useAuth] Token from URL query param could not be decoded — ignoring.",
+        );
       }
     }
 
-    // 2. Existing session
+    // 2. Existing session in sessionStorage
     const stored = sessionStorage.getItem(APP_CONFIG.jwtStorageKey);
     if (stored) {
       const payload = decodeJWT(stored);
       if (payload) {
-        if (payload.exp && payload.exp < Date.now() / 1000) {
+        if (!isTokenValid(stored)) {
+          // Token is expired — evict it so the user hits the auth gate cleanly.
           sessionStorage.removeItem(APP_CONFIG.jwtStorageKey);
         } else {
           setAuthState({ status: "authenticated", token: stored, payload });
           return;
         }
+      } else {
+        // Token is malformed — evict it.
+        sessionStorage.removeItem(APP_CONFIG.jwtStorageKey);
+        console.warn("[useAuth] Stored token could not be decoded — evicted.");
       }
     }
 
-    // 3. Demo mode — generate a real signed token
-    if (APP_CONFIG.demoMode) {
-      generateDemoToken(APP_CONFIG.jwtSecret).then((demoToken) => {
-        const payload = decodeJWT(demoToken)!;
-        sessionStorage.setItem(APP_CONFIG.jwtStorageKey, demoToken);
-        setAuthState({ status: "authenticated", token: demoToken, payload });
-      });
-      return;
+    // 3. [DEV ONLY] Fall back to VITE_DEV_TOKEN
+    const devToken = import.meta.env.VITE_DEV_TOKEN as string | undefined;
+    if (devToken) {
+      const payload = decodeJWT(devToken);
+      if (payload && isTokenValid(devToken)) {
+        console.info(
+          "[useAuth] 🛠️  Dev mode: using VITE_DEV_TOKEN from .env.local",
+        );
+        setAuthState({ status: "authenticated", token: devToken, payload });
+        return;
+      } else {
+        console.warn(
+          "[useAuth] VITE_DEV_TOKEN is set but is invalid or expired — ignoring.",
+        );
+      }
     }
 
-    // 4. Not authenticated
+    // 4. No valid token found.
     setAuthState({
       status: "unauthenticated",
       reason:
