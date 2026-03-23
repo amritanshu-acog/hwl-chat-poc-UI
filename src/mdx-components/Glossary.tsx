@@ -22,36 +22,25 @@ function GlossaryRow({ item, termId, defId }: RowProps) {
     return (
         <div
             role="row"
-            className="group flex flex-col sm:flex-row sm:items-baseline gap-y-1 sm:gap-y-0 rounded-xl border border-gray-100 bg-white px-4 py-3 shadow-sm transition-all hover:border-gray-200 hover:shadow-md"
+            className="flex flex-col gap-1 rounded-xl border border-gray-100 bg-white px-4 py-3 shadow-sm transition-all hover:border-gray-200 hover:shadow-md"
             aria-labelledby={termId}
             aria-describedby={defId}
         >
-            {/* Term cell — full width on mobile, fixed 48 on sm+ */}
-            <div
-                role="cell"
-                className="flex items-start gap-2 shrink-0 w-full sm:w-48"
-            >
-                <span className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-gray-300 transition-colors group-hover:bg-gray-500" aria-hidden="true" />
-                <div className="flex flex-wrap items-start gap-x-2 gap-y-1 min-w-0">
-                    <dt id={termId} className="text-sm font-semibold text-gray-800 break-words">
-                        {item.term}
-                    </dt>
-                    {item.category && (
-                        <span className="self-start shrink-0 rounded px-1.5 py-0.5 text-[10px] font-medium uppercase tracking-wide bg-amber-50 text-amber-700 border border-amber-200">
-                            {item.category}
-                        </span>
-                    )}
-                </div>
+            <div className="flex items-center gap-2">
+                <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-gray-300 transition-colors group-hover:bg-gray-500" aria-hidden="true" />
+                <dt id={termId} className="text-sm font-semibold text-gray-800">
+                    {item.term}
+                </dt>
+                {item.category && (
+                    <span className="rounded px-1.5 py-0.5 text-[10px] font-medium uppercase tracking-wide bg-amber-50 text-amber-700 border border-amber-200">
+                        {item.category}
+                    </span>
+                )}
             </div>
-
-            {/* Divider — desktop only */}
-            <div className="hidden sm:block self-stretch w-px bg-gray-100 mx-4 shrink-0" aria-hidden="true" />
-
-            {/* Definition — must have min-w-0 so it can shrink and wrap */}
             <dd
                 id={defId}
                 role="cell"
-                className="flex-1 min-w-0 pl-[22px] sm:pl-0 text-sm text-gray-500 leading-relaxed break-words"
+                className="pl-[22px] text-sm text-gray-500 leading-relaxed"
             >
                 {item.definition}
             </dd>
@@ -77,7 +66,6 @@ export function Glossary({ items, title, showCategories = true }: GlossaryProps)
                 <h2 className="text-base font-semibold text-gray-800">{title}</h2>
             )}
 
-            {/* Category pills */}
             {categories.length > 0 && (
                 <div className="flex flex-wrap gap-2" role="group" aria-label="Filter by category">
                     <button
@@ -106,14 +94,12 @@ export function Glossary({ items, title, showCategories = true }: GlossaryProps)
                 </div>
             )}
 
-            {/* Count */}
             <p className="px-1 text-xs text-gray-400">
                 {filtered.length === items.length
                     ? `${items.length} term${items.length !== 1 ? "s" : ""}`
                     : `${filtered.length} of ${items.length} terms`}
             </p>
 
-            {/* List */}
             <dl
                 id={`${uid}-list`}
                 className="flex flex-col gap-2"

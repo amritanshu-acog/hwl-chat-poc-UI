@@ -10,7 +10,12 @@
     "build": "tsc -b && vite build",
     "preview": "vite preview",
     "typecheck": "tsc --noEmit",
-    "lint": "eslint ."
+    "lint": "eslint .",
+    "test:states": "bun tests/scripts/test-widget-states.ts",
+    "test:schema": "bun tests/scripts/test-schema-validation.ts",
+    "test:perf": "bun tests/scripts/test-performance.ts",
+    "test:guardrails": "bun tests/scripts/test-guardrails.ts",
+    "test:regression": "bun tests/scripts/test-regression.ts"
   },
   "dependencies": {
     "@mdx-js/mdx": "^3.1.1",
@@ -34,6 +39,7 @@
     "eslint-plugin-react-refresh": "^0.4.24",
     "globals": "^16.5.0",
     "tailwindcss": "^4.1.18",
+    "tsx": "^4.21.0",
     "typescript": "~5.9.3",
     "vite": "^7.3.1"
   },
