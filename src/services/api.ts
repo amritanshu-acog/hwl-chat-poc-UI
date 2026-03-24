@@ -1,14 +1,3 @@
-/**
- * api.ts
- * ------
- * All backend communication: POST /answer, GET /sessions, GET /sessions/:id.
- *
- * Every function:
- *  - Guards against unconfigured VITE_API_URL
- *  - Pre-flight checks token expiry before the network call
- *  - Maps HTTP 401 → UnauthorizedError, 429 → QuotaExceededError, other → ApiError
- */
-
 import { jsonToMdx } from "../lib/jsonToMdx";
 import { APP_CONFIG } from "../config";
 import type {
@@ -47,11 +36,6 @@ async function handleResponse(res: Response): Promise<void> {
 
 export async function sendMessage(
   message: string,
-  /**
-   * Pass the server-confirmed session_id to continue an existing session.
-   * Pass null on the first message — omits session_id from the request body
-   * so the backend creates a fresh session.
-   */
   sessionId: string | null,
   token: string,
   file?: File,
@@ -59,7 +43,6 @@ export async function sendMessage(
   const endpoint = requireEndpoint();
   requireValidToken(token);
 
-  // Only include session_id when the server has assigned one.
   const fields: Record<string, string> = { message };
   if (sessionId) fields.session_id = sessionId;
 
@@ -103,15 +86,12 @@ export async function sendMessage(
     action: parsed.action as Exclude<typeof parsed.action, "quota_exceeded">,
     responseType: parsed.response_type,
     serverSessionId: parsed.session_id,
-    llmResponse: parsed as unknown as LLMResponse, // <-- add this
+    llmResponse: parsed as unknown as LLMResponse,
   };
 }
 
 // ─── GET /sessions ────────────────────────────────────────────────────────────
 
-/**
- * Fetch the authenticated user's session list, sorted by recency (server order).
- */
 export async function fetchSessions(token: string): Promise<SessionListItem[]> {
   const endpoint = requireEndpoint();
   requireValidToken(token);
@@ -126,10 +106,6 @@ export async function fetchSessions(token: string): Promise<SessionListItem[]> {
 
 // ─── GET /sessions/:id ────────────────────────────────────────────────────────
 
-/**
- * Fetch the full turn history for a single session.
- * Throws a plain Error (not ApiError) on 404 so callers can handle it gracefully.
- */
 export async function fetchSessionHistory(
   sessionId: string,
   token: string,
@@ -144,4 +120,27 @@ export async function fetchSessionHistory(
   if (res.status === 404) throw new Error(`Session not found: ${sessionId}`);
   await handleResponse(res);
   return res.json() as Promise<SessionHistory>;
+}
+
+// ─── NEW: DELETE /sessions/:id ────────────────────────────────────────────────
+
+/**
+ * Permanently delete a session. The server returns 204 No Content on success.
+ * Throws UnauthorizedError, ApiError, or a plain Error on 404.
+ */
+export async function deleteSession(
+  sessionId: string,
+  token: string,
+): Promise<void> {
+  const endpoint = requireEndpoint();
+  requireValidToken(token);
+
+  const res = await fetch(`${endpoint}/sessions/${sessionId}`, {
+    method: "DELETE",
+    headers: { Authorization: `Bearer ${token}` },
+  });
+
+  if (res.status === 404) throw new Error(`Session not found: ${sessionId}`);
+  if (res.status === 204) return; // success — no body
+  await handleResponse(res);
 }

@@ -3,7 +3,7 @@ import { flushSync } from "react-dom";
 import type { Message, LLMResponse } from "../types";
 import { useSession } from "../hooks/useSession";
 import { useMessages } from "../hooks/useMessages";
-import { sendMessage } from "../services/api";
+import { sendMessage, deleteSession } from "../services/api";
 import { QuotaExceededError, UnauthorizedError, ApiError } from "../services/errors";
 import { MessageList } from "../components/MessageList";
 import { InputBar } from "../components/InputBar";
@@ -232,6 +232,20 @@ export function ChatPage({
         );
     }
 
+    const handleDeleteSession = async (sessionId: string) => {
+        try {
+            await deleteSession(sessionId, token);
+            refreshSessions();
+            if (activeSessionId === sessionId) handleNewChat();
+        } catch (err) {
+            pushToast({
+                severity: 'error',
+                title: 'Could not delete conversation',
+                message: 'Failed to delete the session. Please try again.',
+            });
+        }
+    };
+
     return (
         <>
             {/* Toast notifications — rendered outside the layout flow */}
@@ -249,6 +263,8 @@ export function ChatPage({
                     isLoading={isWorking}
                     onNewChat={handleNewChat}
                     onSwitchSession={handleSwitchSession}
+                    onDeleteSession={handleDeleteSession}
+
                 />
 
                 <main className="flex flex-1 flex-col min-w-0 bg-slate-50">

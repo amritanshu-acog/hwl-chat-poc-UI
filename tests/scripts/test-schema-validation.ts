@@ -37,64 +37,228 @@ type TestResult = {
   response: Record<string, unknown>;
 };
 
-// ─── Schema definition ────────────────────────────────────────────────────────
+// ─── Schema definition (mirrors LLMResponse + ApiResponse exactly) ────────────
 
-const VALID_ACTIONS = ["respond", "clarify", "not_found", "quota_exceeded"];
+const VALID_ACTIONS = [
+  "respond",
+  "clarify",
+  "not_found",
+  "quota_exceeded",
+] as const;
+
+// "quota_exceeded" is a valid ResponseAction but NOT a valid ResponseType
 const VALID_RESPONSE_TYPES = [
   "answer",
   "options",
   "mixed",
   "notfound",
   "clarify",
-  "quota_exceeded",
-];
+] as const;
+
+const VALID_ALERT_SEVERITIES = ["warning", "info", "danger"] as const;
 
 function validateSchema(body: Record<string, unknown>): string[] {
-  const violations: string[] = [];
+  const v: string[] = [];
 
-  // Required string fields
+  // ── session_id (injected by ApiResponse) ──────────────────────────────────
   if (typeof body.session_id !== "string" || body.session_id.length === 0)
-    violations.push("session_id must be a non-empty string");
+    v.push("session_id must be a non-empty string");
 
-  if (typeof body.action !== "string" || !VALID_ACTIONS.includes(body.action))
-    violations.push(
+  // ── action ────────────────────────────────────────────────────────────────
+  if (
+    typeof body.action !== "string" ||
+    !(VALID_ACTIONS as readonly string[]).includes(body.action)
+  )
+    v.push(
       `action must be one of: ${VALID_ACTIONS.join(", ")} — got: ${String(body.action)}`,
     );
 
+  // ── response_type ─────────────────────────────────────────────────────────
   if (
     typeof body.response_type !== "string" ||
-    !VALID_RESPONSE_TYPES.includes(body.response_type)
+    !(VALID_RESPONSE_TYPES as readonly string[]).includes(body.response_type)
   )
-    violations.push(
+    v.push(
       `response_type must be one of: ${VALID_RESPONSE_TYPES.join(", ")} — got: ${String(body.response_type)}`,
     );
 
-  // Nullable string fields
-  for (const field of ["title", "intro", "summary", "escalation", "followUp"]) {
-    const val = body[field];
-    if (val !== null && val !== undefined && typeof val !== "string")
-      violations.push(`${field} must be string or null — got: ${typeof val}`);
+  // ── title: string (required, but may be empty for clarify responses) ────────
+  if (
+    body.title !== null &&
+    body.title !== undefined &&
+    typeof body.title !== "string"
+  )
+    v.push(`title must be a string or null — got: ${typeof body.title}`);
+
+  // ── alert: LLMAlert | null ────────────────────────────────────────────────
+  if (body.alert !== null && body.alert !== undefined) {
+    if (typeof body.alert !== "object" || Array.isArray(body.alert)) {
+      v.push("alert must be an LLMAlert object or null");
+    } else {
+      const a = body.alert as Record<string, unknown>;
+      if (
+        typeof a.severity !== "string" ||
+        !(VALID_ALERT_SEVERITIES as readonly string[]).includes(a.severity)
+      )
+        v.push(
+          `alert.severity must be one of: ${VALID_ALERT_SEVERITIES.join(", ")} — got: ${String(a.severity)}`,
+        );
+      if (typeof a.title !== "string") v.push("alert.title must be a string");
+      if (typeof a.body !== "string") v.push("alert.body must be a string");
+    }
   }
 
-  // Nullable array fields
-  for (const field of ["steps", "items", "options"]) {
-    const val = body[field];
-    if (val !== null && val !== undefined && !Array.isArray(val))
-      violations.push(`${field} must be array or null — got: ${typeof val}`);
+  // ── intro: string | null | undefined ─────────────────────────────────────
+  if (
+    body.intro !== null &&
+    body.intro !== undefined &&
+    typeof body.intro !== "string"
+  )
+    v.push(
+      `intro must be string, null, or undefined — got: ${typeof body.intro}`,
+    );
+
+  // ── chart: string | null ──────────────────────────────────────────────────
+  if (
+    body.chart !== null &&
+    body.chart !== undefined &&
+    typeof body.chart !== "string"
+  )
+    v.push(`chart must be string or null — got: ${typeof body.chart}`);
+
+  // ── followUp: string | null ───────────────────────────────────────────────
+  if (
+    body.followUp !== null &&
+    body.followUp !== undefined &&
+    typeof body.followUp !== "string"
+  )
+    v.push(`followUp must be string or null — got: ${typeof body.followUp}`);
+
+  // ── steps: LLMStep[] | null ───────────────────────────────────────────────
+  if (body.steps !== null && body.steps !== undefined) {
+    if (!Array.isArray(body.steps)) {
+      v.push(`steps must be an array or null — got: ${typeof body.steps}`);
+    } else {
+      (body.steps as unknown[]).forEach((step, i) => {
+        const s = step as Record<string, unknown>;
+        if (typeof s.title !== "string")
+          v.push(`steps[${i}].title must be a string`);
+        if (typeof s.body !== "string")
+          v.push(`steps[${i}].body must be a string`);
+      });
+    }
   }
 
-  // options items shape — if present must have label and value
-  if (Array.isArray(body.options)) {
-    body.options.forEach((opt, i) => {
-      const o = opt as Record<string, unknown>;
-      if (typeof o.label !== "string")
-        violations.push(`options[${i}].label must be a string`);
-      if (typeof o.value !== "string")
-        violations.push(`options[${i}].value must be a string`);
+  // ── items: string[] | null ────────────────────────────────────────────────
+  if (body.items !== null && body.items !== undefined) {
+    if (!Array.isArray(body.items)) {
+      v.push(`items must be an array or null — got: ${typeof body.items}`);
+    } else {
+      (body.items as unknown[]).forEach((item, i) => {
+        if (typeof item !== "string")
+          v.push(`items[${i}] must be a string — got: ${typeof item}`);
+      });
+    }
+  }
+
+  // ── options: LLMOption[] | null ───────────────────────────────────────────
+  if (body.options !== null && body.options !== undefined) {
+    if (!Array.isArray(body.options)) {
+      v.push(`options must be an array or null — got: ${typeof body.options}`);
+    } else {
+      (body.options as unknown[]).forEach((opt, i) => {
+        const o = opt as Record<string, unknown>;
+        if (typeof o.label !== "string")
+          v.push(`options[${i}].label must be a string`);
+        if (typeof o.value !== "string")
+          v.push(`options[${i}].value must be a string`);
+        if (
+          o.description !== undefined &&
+          o.description !== null &&
+          typeof o.description !== "string"
+        )
+          v.push(
+            `options[${i}].description must be string or undefined — got: ${typeof o.description}`,
+          );
+      });
+    }
+  }
+
+  // ── summary: LLMSummary | null ────────────────────────────────────────────
+  if (body.summary !== null && body.summary !== undefined) {
+    if (typeof body.summary !== "object" || Array.isArray(body.summary)) {
+      v.push("summary must be an LLMSummary object or null");
+    } else {
+      const s = body.summary as Record<string, unknown>;
+      if (typeof s.title !== "string") v.push("summary.title must be a string");
+      if (typeof s.body !== "string") v.push("summary.body must be a string");
+      if (s.actions !== undefined && s.actions !== null) {
+        if (!Array.isArray(s.actions)) {
+          v.push("summary.actions must be an array or undefined");
+        } else {
+          (s.actions as unknown[]).forEach((a, i) => {
+            if (typeof a !== "string")
+              v.push(
+                `summary.actions[${i}] must be a string — got: ${typeof a}`,
+              );
+          });
+        }
+      }
+    }
+  }
+
+  // ── escalation: LLMEscalation | null ─────────────────────────────────────
+  if (body.escalation !== null && body.escalation !== undefined) {
+    if (typeof body.escalation !== "object" || Array.isArray(body.escalation)) {
+      v.push("escalation must be an LLMEscalation object or null");
+    } else {
+      const e = body.escalation as Record<string, unknown>;
+      if (typeof e.title !== "string")
+        v.push("escalation.title must be a string");
+      if (typeof e.message !== "string")
+        v.push("escalation.message must be a string");
+      if (
+        e.reason !== undefined &&
+        e.reason !== null &&
+        typeof e.reason !== "string"
+      )
+        v.push(
+          `escalation.reason must be string or undefined — got: ${typeof e.reason}`,
+        );
+    }
+  }
+
+  // ── glossaryItems: LLMGlossaryItem[] | null | undefined ──────────────────
+  if (body.glossaryItems !== null && body.glossaryItems !== undefined) {
+    if (!Array.isArray(body.glossaryItems)) {
+      v.push(
+        `glossaryItems must be an array or null — got: ${typeof body.glossaryItems}`,
+      );
+    } else {
+      (body.glossaryItems as unknown[]).forEach((item, i) => {
+        const g = item as Record<string, unknown>;
+        if (typeof g.term !== "string")
+          v.push(`glossaryItems[${i}].term must be a string`);
+        if (typeof g.definition !== "string")
+          v.push(`glossaryItems[${i}].definition must be a string`);
+      });
+    }
+  }
+
+  // ── citations: LLMCitation[] (required, not nullable) ────────────────────
+  if (!Array.isArray(body.citations)) {
+    v.push("citations must be an array (never null)");
+  } else {
+    (body.citations as unknown[]).forEach((c, i) => {
+      const cit = c as Record<string, unknown>;
+      if (typeof cit.chunk_id !== "string")
+        v.push(`citations[${i}].chunk_id must be a string`);
+      if (typeof cit.source !== "string")
+        v.push(`citations[${i}].source must be a string`);
     });
   }
 
-  return violations;
+  return v;
 }
 
 // ─── Corpus ───────────────────────────────────────────────────────────────────

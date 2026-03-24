@@ -15,7 +15,8 @@
     "test:schema": "bun tests/scripts/test-schema-validation.ts",
     "test:perf": "bun tests/scripts/test-performance.ts",
     "test:guardrails": "bun tests/scripts/test-guardrails.ts",
-    "test:regression": "bun tests/scripts/test-regression.ts"
+    "test:regression": "bun tests/scripts/test-regression.ts",
+    "test:golden": "bun tests/scripts/test-golden.ts"
   },
   "dependencies": {
     "@mdx-js/mdx": "^3.1.1",
